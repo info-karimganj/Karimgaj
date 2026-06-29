@@ -1,0 +1,6 @@
+{
+  "name": "Karimganj Upazila",
+  "description": "A comprehensive civic companion app for the citizens of Karimganj Upazila, Kishoreganj, Bangladesh, featuring emergency contacts, administration directory, educational resources, health centers, and tourism portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

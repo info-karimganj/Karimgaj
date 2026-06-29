@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">করিমগঞ্জ উপজেলা</string>
+    <string name="tab_latest">সর্বশেষ</string>
+    <string name="tab_admin">প্রশাসন</string>
+    <string name="tab_education">শিক্ষা</string>
+    <string name="tab_health">স্বাস্থ্য</string>
+    <string name="tab_tourism">পর্যটন</string>
+    <string name="tab_emergency">জরুরি নম্বর</string>
+    <string name="search_hint">খুঁজুন...</string>
+    <string name="call_dial">কল করুন</string>
+    <string name="btn_retry">আবার চেষ্টা করুন</string>
+    <string name="lbl_area">আয়তন</string>
+    <string name="lbl_population">জনসংখ্যা</string>
+    <string name="lbl_location">ভৌগোলিক অবস্থান</string>
+    <string name="lbl_address">ঠিকানা</string>
+    <string name="lbl_doctor">দায়িত্বরত চিকিৎসক</string>
+    <string name="lbl_designation">পদবি</string>
+    <string name="err_load">তথ্য লোড করতে সাধারণ সমস্যা হয়েছে। অফলাইন ক্যাশ প্রদর্শিত হচ্ছে।</string>
+    <string name="empty_msg">কোনো তথ্য পাওয়া যায়নি।</string>
+    <string name="emergency_headline">জরুরি হেল্পলাইন</string>
+    <string name="about_headline">আমাদের করিমগঞ্জ</string>
+    <string name="btn_details">বিস্তারিত দেখুন</string>
+</resources>
