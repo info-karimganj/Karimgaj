@@ -231,9 +231,9 @@ class CivicRepositoryImpl(
             UpazilaInfo(
                 id = "single_doc",
                 title = "করিমগঞ্জ উপজেলা",
-                description = "করিমগঞ্জ উপজেলা ঢাকা বিভাগের কিশোরগঞ্জ জেলার অন্তর্গত একটি ঐতিহাসিক ও সম্ভাবনাময় অঞ্চল। এটি নরসুন্দা নদী ও বিল অঞ্চলের প্রাকৃতিক সৌন্দর্যে বেষ্টিত। করিমগঞ্জ মূলত তার বিশাল হাওর অঞ্চল (বালিখোলা ঘাট), জঙ্গলবাড়ি দুর্গ (ঈসা খাঁর দ্বিতীয় রাজধানী), সমৃদ্ধ লোক-ঐতিহ্য এবং প্রাণবন্ত কৃষির জন্য সুপরিচিত। দেশের উন্নয়ন সূচকে করিমগঞ্জের প্রশাসন, শিক্ষা ও স্বাস্থ্য সেবা সমূহ এই ডিজিটাল অ্যাপলিকশনের মাধ্যমে সাধারণ জনগণের দোরগোড়ায় পৌঁছে দেওয়া হচ্ছে।",
-                area = "২০০.৫২ বর্গ কিলোমিটার",
-                population = "৩,২৫,৬০০ জন (প্রায়)",
+                description = "করিমগঞ্জ উপজেলা ঢাকা বিভাগের কিশোরগঞ্জ জেলার অন্তর্গত একটি ঐতিহাসিক ও সম্ভাবনাময় অঞ্চল। উপজেলার সদর দপ্তর করিমগঞ্জ পৌরসভা। মোট আয়তন ২০০.৫০ বর্গ কিলোমিটার, মোট জনসংখ্যা ৩,২৮,২৮৮ জন এবং স্বাক্ষরতার হার ৬২.১৯%। প্রধান নদীসমূহ হচ্ছে নরসুন্দা, বাথাইল, সিংগুয়া ও ধানু এবং প্রধান বিলসমূহ হচ্ছে বালিয়া, নাউলি, বিল বাড়া, উখলা, ছোটহারিয়া ও কোলাই।",
+                area = "২০০.৫০ বর্গ কিলোমিটার",
+                population = "৩,২৮,২৮৮ জন",
                 location_lat = 24.4539,
                 location_lng = 90.8753,
                 image_url = "https://images.unsplash.com/photo-1596401057633-53a01deea096"
@@ -245,8 +245,16 @@ class CivicRepositoryImpl(
             listOf(
                 GovernmentOffice(
                     id = "office_1",
-                    name = "উপজেলা নির্বাহী অফিসারের কার্যালয় (UNO)",
-                    designation = "উপজেলা নির্বাহী অফিসার",
+                    name = "শারমিন সুলতানা / উম্মে মুসলিমা",
+                    designation = "উপজেলা নির্বাহী কর্মকর্তা (UNO)",
+                    phone = "01332-857121",
+                    address = "unokarimganj@mopa.gov.bd | উপজেলা নির্বাহী অফিসারের কার্যালয়, করিমগঞ্জ (যোগদান: ০৭-০৪-২০২৬, বিসিএস ৩৬তম ব্যাচ)",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_chairman",
+                    name = "সাইফুল ইসলাম সুমন",
+                    designation = "উপজেলা পরিষদ চেয়ারম্যান",
                     phone = "01713-332306",
                     address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
                     imageUrl = null
@@ -263,8 +271,8 @@ class CivicRepositoryImpl(
                     id = "office_3",
                     name = "করিমগঞ্জ থানা পুলিশ স্টেশন",
                     designation = "অফিসার ইন চার্জ (OC)",
-                    phone = "01320-104532",
-                    address = "থানা মোড়, করিমগঞ্জ সদর",
+                    phone = "01320-095417",
+                    address = "ockis.kar@police.gov.bd | থানা মোড়, করিমগঞ্জ সদর",
                     imageUrl = null
                 ),
                 GovernmentOffice(
@@ -275,6 +283,96 @@ class CivicRepositoryImpl(
                     address = "কমপ্লেক্স ভবন, করিমগঞ্জ",
                     imageUrl = null
                 ),
+                // 11 Union Parishads (PDF Serial Sequence)
+                GovernmentOffice(
+                    id = "office_union_kadirjangal",
+                    name = "কাদিরজঙ্গল ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মো : ফজলুর রহমান",
+                    phone = "01731-496642",
+                    address = "সচিব: সঞ্জিত কুমার আচার্য্য (01716-453247) | কাদিরজঙ্গল, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_gujadia",
+                    name = "গুজাদিয়া ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মোঃ রফিকুল ইসলাম",
+                    phone = "01716-241357",
+                    address = "সচিব: মোহাম্মদ কাঞ্চন মিয়া | গুজাদিয়া, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_kiraton",
+                    name = "কিরাটন ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মো : ইবাদুর রহমান শামীম",
+                    phone = "01989-255499",
+                    address = "সচিব: রজ গোপাল বৈষ্ণব | কিরাটন, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_barogharia",
+                    name = "বারঘরিয়া ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: আয়ুব উদ্দীন",
+                    phone = "01736-437903",
+                    address = "সচিব: বিপ্লব কুমার চক্রবর্তী | বারঘরিয়া, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_niamatpur",
+                    name = "নিয়ামতপুর ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মখদুম কবীর তন্ময়",
+                    phone = "01711-143948",
+                    address = "সচিব: মোঃ শামছুল হুদা (01931-354600) | নিয়ামতপুর, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_dehunda",
+                    name = "দেহুন্দা ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মশিউর রহমান",
+                    phone = "01716-325430",
+                    address = "দেহুন্দা, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_sutarpara",
+                    name = "সুতরপাড়া ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মো : হারুণ অর রশীদ",
+                    phone = "01789-568289",
+                    address = "সচিব: তোফায়েল আহমেদ (01710-756589) | সুতরপাড়া, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_gunodhar",
+                    name = "গুনধর ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মোঃ আবুছায়েম রাসেল",
+                    phone = "01712-856616",
+                    address = "সচিব ইমেল: gundharup8@gmail.com | গুনধর, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_joyka",
+                    name = "জয়কা ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মো : আশরাফ উদ্দীন",
+                    phone = "01741-393843",
+                    address = "সচিব: জসিম উদ্দিন (01728-695471) | জয়কা, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_zafrabad",
+                    name = "জাফরাবাদ ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: সাইফ উদ্দীন ফকির",
+                    phone = "01911-924935",
+                    address = "সচিব: মো : আমির হামজা | জাফরাবাদ, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_union_noabad",
+                    name = "নোয়াবাদ ইউনিয়ন পরিষদ",
+                    designation = "ইউপি চেয়ারম্যান: মো : রুহুল আমীন কাজী",
+                    phone = "01728-306372",
+                    address = "সচিব: রঞ্জিত কুমার সরকার (01720-221987) | নোয়াবাদ, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                // Office Staff
                 GovernmentOffice(
                     id = "office_staff_1",
                     name = "মোঃ আজহারুল ইসলাম",
@@ -322,43 +420,206 @@ class CivicRepositoryImpl(
                     phone = "01933-297860",
                     address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
                     imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_district_dc",
+                    name = "জেলা প্রশাসকের কার্যালয়, কিশোরগঞ্জ",
+                    designation = "জেলা প্রশাসক (Deputy Commissioner / DC)",
+                    phone = "0941-61801",
+                    address = "dckishoreganj@mopa.gov.bd | জেলা প্রশাসন ভবন, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_district_sp",
+                    name = "পুলিশ সুপারের কার্যালয়, কিশোরগঞ্জ",
+                    designation = "পুলিশ সুপার (Superintendent of Police / SP)",
+                    phone = "0941-61605",
+                    address = "spkishoreganj@police.gov.bd | পুলিশ হেডকোয়ার্টার্স রোড, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_district_dae",
+                    name = "কৃষি সম্প্রসারণ অধিদপ্তর (খামারবাড়ি), কিশোরগঞ্জ",
+                    designation = "উপ-পরিচালক (Deputy Director, DAE)",
+                    phone = "0941-61520",
+                    address = "dddaekishoreganj@gmail.com | খামারবাড়ি, কিশোরগঞ্জ",
+                    imageUrl = null
                 )
             )
         )
 
-        // Seed schools
+        // Seed Education Institutes
         civicDao.insertEducationInstitutes(
             listOf(
+                // Colleges
                 EducationInstitute(
-                    id = "edu_1",
-                    name = "করিমগঞ্জ সরকারি পাইলট মডেল উচ্চ বিদ্যালয়",
-                    type = "School (উচ্চ বিদ্যালয়)",
-                    phone = "01912-112233",
-                    address = "করিমগঞ্জ পৌরসভা, কিশোরগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1580582932707-520aed937b7b"
-                ),
-                EducationInstitute(
-                    id = "edu_2",
+                    id = "edu_college_1",
                     name = "করিমগঞ্জ সরকারি কলেজ",
                     type = "College (মহাবিদ্যালয়)",
                     phone = "01715-998877",
-                    address = "কলেজ রোড, করিমগঞ্জ",
+                    address = "EIIN: ১১০৩৮২ | করিমগঞ্জ পৌরসভা, কিশোরগঞ্জ",
                     imageUrl = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1"
                 ),
                 EducationInstitute(
-                    id = "edu_3",
-                    name = "জঙ্গলবাড়ি উচ্চ বিদ্যালয়",
-                    type = "School (উচ্চ বিদ্যালয়)",
-                    phone = "01512-321456",
-                    address = "জঙ্গলবাড়ি দুর্গ সংলগ্ন, করিমগঞ্জ",
+                    id = "edu_college_2",
+                    name = "করিমগঞ্জ পৌর মডেল কলেজ",
+                    type = "College (মহাবিদ্যালয়)",
+                    phone = "01712-345678",
+                    address = "EIIN: ১৩৫৩২১ | করিমগঞ্জ পৌরসভা, কিশোরগঞ্জ",
                     imageUrl = "https://images.unsplash.com/photo-1541339907198-e08756dedf3f"
                 ),
                 EducationInstitute(
-                    id = "edu_4",
-                    name = "করিমগঞ্জ কওমী মাদ্রাসা ও লিল্লাহ বোডিং",
+                    id = "edu_college_3",
+                    name = "জঙ্গলবাড়ি মহিলা কলেজ",
+                    type = "College (মহাবিদ্যালয়)",
+                    phone = "01711-223344",
+                    address = "EIIN: ১১০৩৮৩ | বাদেশ্রীরামপুর (কাদিরজঙ্গল)",
+                    imageUrl = "https://images.unsplash.com/photo-1580582932707-520aed937b7b"
+                ),
+                EducationInstitute(
+                    id = "edu_college_4",
+                    name = "হাজী আব্দুল বারী মাস্টার কলেজ",
+                    type = "College (মহাবিদ্যালয়)",
+                    phone = "01712-233445",
+                    address = "EIIN: ১৩৭৬২১ | নিয়ামতপুর, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_college_5",
+                    name = "কিশোরগঞ্জ পলিটেকনিক ইনস্টিটিউট",
+                    type = "College (কারিগরি)",
+                    phone = "01911-334455",
+                    address = "পৌরসভা এলাকা, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                // Schools
+                EducationInstitute(
+                    id = "edu_school_1",
+                    name = "করিমগঞ্জ সরকারি পাইলট মডেল উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01912-112233",
+                    address = "EIIN: ১১০৩৫৬ | করিমগঞ্জ পৌরসভা, কিশোরগঞ্জ",
+                    imageUrl = "https://images.unsplash.com/photo-1580582932707-520aed937b7b"
+                ),
+                EducationInstitute(
+                    id = "edu_school_2",
+                    name = "শামসুন্নাহার-ওসমান গণি শিক্ষা নিকেতন",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01711-556677",
+                    address = "EIIN: ১১০৩৪৭ | করিমগঞ্জ বাজার, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_3",
+                    name = "জঙ্গলবাড়ি উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01512-321456",
+                    address = "EIIN: ১১০৩৪৬ | জঙ্গলবাড়ি দুর্গ সংলগ্ন, করিমগঞ্জ",
+                    imageUrl = "https://images.unsplash.com/photo-1541339907198-e08756dedf3f"
+                ),
+                EducationInstitute(
+                    id = "edu_school_4",
+                    name = "পিটুয়া আদর্শ উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01711-224466",
+                    address = "EIIN: ১১০৩ND৯ | পিটুয়া, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_5",
+                    name = "বলিয়া উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01712-335577",
+                    address = "EIIN: ১১০৩৫০ | বলিয়া, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_6",
+                    name = "নানশ্রী উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01713-446688",
+                    address = "EIIN: ১১০৩৫১ | নানশ্রী, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_7",
+                    name = "ভাতিয়া উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01714-557799",
+                    address = "EIIN: ১১০৩৫২ | ভাতিয়া (দেহুন্দা)",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_8",
+                    name = "উরদিঘী উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01715-668800",
+                    address = "EIIN: ১১০৩৫৩ | উরদিঘী, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_9",
+                    name = "করিমগঞ্জ পিলখানা বালিকা উচ্চ বিদ্যালয়",
+                    type = "School (উচ্চ বিদ্যালয়)",
+                    phone = "01716-779911",
+                    address = "EIIN: ১১০৩৫৫ | করিমগঞ্জ পৌরসভা, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_school_10",
+                    name = "সুতারপাড়া জুনিয়র স্কুল",
+                    type = "School (জুনিয়র)",
+                    phone = "01717-880022",
+                    address = "EIIN: ১১০৩৪৮ | সুতারপাড়া, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                // Madrasas
+                EducationInstitute(
+                    id = "edu_madrasa_1",
+                    name = "করিমগঞ্জ সোবহানিয়া কামিল মাদ্রাসা",
                     type = "Madrasa (মাদ্রাসা)",
                     phone = "01819-445566",
-                    address = "হাওর রোড, করিমগঞ্জ সদর",
+                    address = "ধরণ: কামিল | করিমগঞ্জ সদর, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_madrasa_2",
+                    name = "কিরাটন ইসলামিয়া ফাজিল মাদ্রাসা",
+                    type = "Madrasa (মাদ্রাসা)",
+                    phone = "01812-345678",
+                    address = "ধরণ: ফাজিল | কিরাটন, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_madrasa_3",
+                    name = "নিয়ামতপুর সিনিয়র মাদ্রাসা",
+                    type = "Madrasa (মাদ্রাসা)",
+                    phone = "01813-456789",
+                    address = "ধরণ: ফাজিল / সিনিয়র | নিয়ামতপুর, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_madrasa_4",
+                    name = "খাকশ্রী নূরুনুল উলুম ডি এস সিনিয়র মাদ্রাসা",
+                    type = "Madrasa (মাদ্রাসা)",
+                    phone = "01814-567890",
+                    address = "ধরণ: আলিম / সিনিয়র | খাকশ্রী, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_madrasa_5",
+                    name = "ঝাউতলার আনোয়ারিয়া সিনিয়র মাদ্রাসা",
+                    type = "Madrasa (মাদ্রাসা)",
+                    phone = "01815-678901",
+                    address = "ধরণ: আলিম / সিনিয়র | নোয়াবাদ, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                EducationInstitute(
+                    id = "edu_madrasa_6",
+                    name = "উরদিঘী দাখিল মাদ্রাসা",
+                    type = "Madrasa (মাদ্রাসা)",
+                    phone = "01816-789012",
+                    address = "ধরণ: দাখিল | উরদিঘী, করিমগঞ্জ",
                     imageUrl = null
                 )
             )
@@ -369,10 +630,10 @@ class CivicRepositoryImpl(
             listOf(
                 HealthCenter(
                     id = "health_1",
-                    name = "করিমগঞ্জ উপজেলা স্বাস্থ্য কমপ্লেক্স (হাসপাতাল)",
-                    doctorName = "ডা. মোহা. কামাল উদ্দিন (UHFPO)",
-                    phone = "01711-554433",
-                    address = "হাসপাতাল ঘাট রোড, করিমগঞ্জ",
+                    name = "করিমগঞ্জ উপজেলা স্বাস্থ্য কমপ্লেক্স (৫০ শয্যা)",
+                    doctorName = "UH&FPO (উপজেলা স্বাস্থ্য কর্মকর্তা)",
+                    phone = "01730-0324498",
+                    address = "কিশোরগঞ্জ-করিমগঞ্জ রোড, করিমগঞ্জ সদর (হটলাইন: ০৯৬১১ ৫৩০ ৫৩০, অ্যাম্বুলেন্স: ০১৬৩৫৬০০৮৩৫)",
                     imageUrl = "https://images.unsplash.com/photo-1586773860418-d37222d8fce3"
                 ),
                 HealthCenter(
@@ -380,7 +641,7 @@ class CivicRepositoryImpl(
                     name = "নিয়ামতপুর ইউনিয়ন উপ-স্বাস্থ্য কেন্দ্র",
                     doctorName = "ডা. ফারহানা জেসমিন (মেডিকেল অফিসার)",
                     phone = "01511-223344",
-                    address = "নিয়ামতপুর বাজার, করিমগঞ্জ",
+                    address = "নিয়ামতপুর বাজার, করিমগঞ্জ (১টি স্যাটেলাইট ক্লিনিক ও ৭টি FWC এর অন্তর্ভুক্ত)",
                     imageUrl = null
                 ),
                 HealthCenter(
@@ -388,7 +649,7 @@ class CivicRepositoryImpl(
                     name = "জয়কা মা ও শিশু কল্যাণ কেন্দ্র",
                     doctorName = "ডা. সুফিয়া খাতুন (অন-ডিউটি গাইনোকোলজিস্ট)",
                     phone = "01812-998811",
-                    address = "জয়কা ইউপি কার্যালয় সংলগ্ন, করিমগঞ্জ",
+                    address = "জয়কা ইউপি কার্যালয় সংলগ্ন, করিমগঞ্জ (৩৩টি কমিউনিটি ক্লিনিকের অন্যতম)",
                     imageUrl = null
                 )
             )
@@ -399,17 +660,17 @@ class CivicRepositoryImpl(
             listOf(
                 TourismPlace(
                     id = "tour_1",
-                    name = "বালিখোলা হাওর ঘাট ও ডকইয়ার্ড (Balikhola)",
-                    description = "করিমগঞ্জ ও মিঠামইনের অন্যতম আকর্ষণীয় সংযোগ সেতু ও পর্যটন ঘাট। সুবিশাল নীল হাওর জলের উত্তাল ঢেউ, শত শত পাল তোলা নৌকার মেলা এবং বালিখোলা ঘাটের বিখ্যাত সূর্যাস্ত দেখতে হাজার পর্যটক গ্রীষ্মকালে ভিড় জমায়। ঘাটের আশেপাশের দৃষ্টিনন্দন সড়ক ও ক্যাফে সমূহও দারুণ জনপ্রিয়।",
-                    address = "চামড়া বন্দর মহাসড়ক, করিমগঞ্জ, কিশোরগঞ্জ",
-                    imageUrl = null
+                    name = "বালিখোলা ঘাট (ভাটির সমুদ্র সৈকত)",
+                    description = "করিমগঞ্জ ও মিঠামইনের আকর্ষণীয় সংযোগ পর্যটন ঘাট। ৩ কিমি পিচ ঢালা দৃষ্টিনন্দন সড়ক হাওরের মাঝে চিড়ে তৈরি করা হয়েছে যা বর্ষায় ডুবে যায় না। সূর্যাস্ত দেখতে হাজার হাজার পর্যটক এখানে ভিড় জমায়। এখান থেকে মিঠামইন ও রাষ্ট্রপতির বাড়ি ট্রলারে ভ্রমণ করা যায়।",
+                    address = "নিয়ামতপুর ইউনিয়ন, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = "https://images.unsplash.com/photo-1596401057633-53a01deea096"
                 ),
                 TourismPlace(
                     id = "tour_2",
                     name = "ঐতিহাসিক জঙ্গলবাড়ি দুর্গ (ঈসা খাঁর দ্বিতীয় রাজধানী)",
-                    description = "বাংলার বারো ভূঁইয়ার প্রধান বীর ঈসা খাঁর স্মৃতিবিজড়িত অন্যতম ঐতিহাসিক দুর্গ এটি। দুর্গের সুন্দর প্রাঙ্গণ, প্রাচীন শৈলীর মসজিদ ও সুদীর্ঘ পরিখা আপনার ভ্রমণের মধ্য দিয়ে আপনাকে মোঘল ও সুলতানি আমলে ঘুরিয়ে আনবে। কিশোরগঞ্জ জেলার অন্যতম গৌরবময় নিদর্শন এটি।",
-                    address = "জঙ্গলবাড়ি গ্রাম, করিমগঞ্জ",
-                    imageUrl = null
+                    description = "বাংলার বারো ভূঁইয়ার প্রধান বীর ঈসা খাঁর স্মৃতিবিজড়িত অন্যতম ঐতিহাসিক দুর্গ এটি। মোঘল আমলে নির্মিত দুর্গের সুন্দর পরিখা, সুরম্য তিন গম্বুজ বিশিষ্ট শাহি মসজিদ ও স্মৃতি জাদুঘর এখানে অবস্থিত। করিমগঞ্জ পৌরসভা থেকে প্রায় ৬ কিমি দূরে অবস্থিত।",
+                    address = "জঙ্গলবাড়ি গ্রাম, কাদিরজঙ্গল ইউনিয়ন, করিমগঞ্জ",
+                    imageUrl = "https://images.unsplash.com/photo-1580582932707-520aed937b7b"
                 )
             )
         )
@@ -421,7 +682,7 @@ class CivicRepositoryImpl(
                     id = "emg_1",
                     serviceName = "করিমগঞ্জ ফায়ার সার্ভিস স্টেশন",
                     phone = "01730-336688",
-                    address = "করিমগঞ্জ ফায়ার রোড, কিশোরগঞ্জ"
+                    address = "জরুরি হটলাইন: ১০২ / ০৯৯৯ | করিমগঞ্জ ফায়ার রোড, কিশোরগঞ্জ"
                 ),
                 EmergencyContact(
                     id = "emg_2",
@@ -432,20 +693,38 @@ class CivicRepositoryImpl(
                 EmergencyContact(
                     id = "emg_3",
                     serviceName = "জরুরি অ্যাম্বুলেন্স (করিমগঞ্জ স্বাস্থ্য কমপ্লেক্স)",
-                    phone = "01711-554433",
+                    phone = "01635-600835",
                     address = "হাসপাতাল ঘাট, করিমগঞ্জ"
                 ),
                 EmergencyContact(
                     id = "emg_4",
-                    serviceName = "করিমগঞ্জ থানা কন্ট্রোল রুম (OC)",
-                    phone = "01320-104532",
-                    address = "থানা মোড়, করিমগঞ্জ"
+                    serviceName = "করিমগঞ্জ থানা পুলিশ স্টেশন (OC)",
+                    phone = "01320-095417",
+                    address = "ockis.kar@police.gov.bd | থানা মোড়, করিমগঞ্জ"
                 ),
                 EmergencyContact(
                     id = "emg_5",
                     serviceName = "জরুরি বিদ্যুৎ সেবা (পল্লী বিদ্যুৎ জোনাল অফিস)",
                     phone = "01769-400100",
                     address = "চামড়া বন্দর সড়ক, করিমগঞ্জ"
+                ),
+                EmergencyContact(
+                    id = "emg_6",
+                    serviceName = "চাইল্ড হেল্পলাইন (শিশু সহায়তা)",
+                    phone = "1098",
+                    address = "সারা বাংলাদেশ (টোল ফ্রী)"
+                ),
+                EmergencyContact(
+                    id = "emg_7",
+                    serviceName = "নারী ও শিশু নির্যাতন প্রতিরোধ সেল",
+                    phone = "109",
+                    address = "সারা বাংলাদেশ (টোল ফ্রী)"
+                ),
+                EmergencyContact(
+                    id = "emg_8",
+                    serviceName = "সরকারি নৌ-পরিবহন জরুরি হটলাইন",
+                    phone = "16113",
+                    address = "সারা বাংলাদেশ (টোল ফ্রী)"
                 )
             )
         )

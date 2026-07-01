@@ -53,8 +53,24 @@ import com.example.viewmodel.UiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.BorderStroke
-
 import androidx.compose.runtime.compositionLocalOf
+
+data class ChatMessage(
+    val id: String = "",
+    val sender: String = "",
+    val text: String = "",
+    val timestamp: Long = 0L,
+    val senderId: String = "",
+    val verified: Boolean = false
+)
+
+data class UnionData(val name: String, val leader: String, val phone: String, val area: String, val population: String, val website: String = "")
+data class ServiceDetail(val title: String, val desc: String, val link: String)
+data class GuideStep(val title: String, val instructions: String)
+data class VetService(val title: String, val desc: String, val phone: String)
+data class NoticeItem(val title: String, val content: String)
+data class AmbulanceData(val name: String, val desc: String, val phone: String)
+data class PharmacyData(val name: String, val desc: String, val phone: String)
 
 val LocalThemeState = compositionLocalOf { false }
 
@@ -351,15 +367,15 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             if (activeFullSubPage != null) {
-                if (activeFullSubPage == "chat") {
-                    RealtimeChatScreen(viewModel = viewModel, onBack = { viewModel.setActiveFullSubPage(null) })
-                } else {
-                    FullSubPageScreen(
-                        pageId = activeFullSubPage!!,
-                        onBack = { viewModel.setActiveFullSubPage(null) },
-                        context = context
-                    )
-                }
+                // if (activeFullSubPage == "chat") {
+                //     RealtimeChatScreen(viewModel = viewModel, onBack = { viewModel.setActiveFullSubPage(null) })
+                // } else {
+                //     FullSubPageScreen(
+                //         pageId = activeFullSubPage!!,
+                //         onBack = { viewModel.setActiveFullSubPage(null) },
+                //         context = context
+                //     )
+                // }
             } else if (uiCategoryFilter != null) {
                 // 1. FILTERED LIVE LIST VIEW (Dynamic items retrieval)
                 when (val itemsState = filteredItemsState) {
@@ -382,9 +398,9 @@ fun HomeScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 if (uiCategoryFilter == "প্রশাসন") {
-                                    val officers = items.filter { it is GovernmentOffice && !it.id.startsWith("office_staff_") }
-                                    val staff = items.filter { it is GovernmentOffice && it.id.startsWith("office_staff_") }
-                                    val otherItems = items.filter { it !is GovernmentOffice }
+                                    val officers = items.filter { it is GovernmentOffice && !it.id.startsWith("office_staff_") && !it.id.startsWith("office_union_") }
+                                    val staff = items.filter { it is GovernmentOffice && it.id.startsWith("office_staff_") && !it.id.startsWith("office_union_") }
+                                    val otherItems = items.filter { it !is GovernmentOffice && !it.id.startsWith("office_union_") }
 
                                     if (officers.isNotEmpty()) {
                                         item {
@@ -517,105 +533,7 @@ fun HomeScreen(
                                     }
                                 }
 
-                                // Append administrative area information if category is "প্রশাসন"
-                                if (uiCategoryFilter == "প্রশাসন") {
-                                    item {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
-                                            shape = RoundedCornerShape(14.dp),
-                                            border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
-                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                                        ) {
-                                            Column(modifier = Modifier.padding(16.dp)) {
-                                                Row(
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .clickable { isAdminAreaExpanded = !isAdminAreaExpanded },
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(40.dp)
-                                                            .background(Color(0xFFFFEBEE), shape = CircleShape), // Soft light red circle
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.AccountBalance,
-                                                            contentDescription = null,
-                                                            tint = Color(0xFFB71C1C), // Deep Red
-                                                            modifier = Modifier.size(22.dp)
-                                                        )
-                                                    }
-                                                    Spacer(modifier = Modifier.width(14.dp))
-                                                    Column(modifier = Modifier.weight(1f)) {
-                                                        Text(
-                                                            text = if (isEnglish) "Administrative Area" else "প্রশাসনিক সীমানা ও এলাকা",
-                                                            fontSize = 16.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = Color(0xFFB71C1C)
-                                                        )
-                                                        Spacer(modifier = Modifier.height(2.dp))
-                                                        Text(
-                                                            text = if (isEnglish) "1 Municipality and 11 Unions (Tap to view)" else "১টি পৌরসভা ও ১১টি ইউনিয়ন (বিস্তারিত দেখতে চাপুন)",
-                                                            fontSize = 12.sp,
-                                                            color = Color.Gray
-                                                        )
-                                                    }
-                                                    Icon(
-                                                        imageVector = if (isAdminAreaExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                                                        contentDescription = if (isAdminAreaExpanded) "Collapse" else "Expand",
-                                                        tint = Color(0xFFB71C1C),
-                                                        modifier = Modifier.size(24.dp)
-                                                    )
-                                                }
-                                                
-                                                if (isAdminAreaExpanded) {
-                                                    Spacer(modifier = Modifier.height(12.dp))
-                                                    Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-                                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                                SubSectionHeader(if (isEnglish) "Municipality" else "পৌরসভা")
-                                                BulletPointItem(if (isEnglish) "Karimganj Municipality" else "করিমগঞ্জ পৌরসভা")
-                                                
-                                                Spacer(modifier = Modifier.height(8.dp))
-                                                SubSectionHeader(if (isEnglish) "Unions" else "ইউনিয়নসমূহ")
-                                                val unions = listOf(
-                                                    "১. কাদিরজঙ্গল ইউনিয়ন",
-                                                    "২. গুজাদিয়া ইউনিয়ন",
-                                                    "৩. কিরাটন ইউনিয়ন",
-                                                    "৪. বারঘরিয়া ইউনিয়ন",
-                                                    "৫. নিয়ামতপুর ইউনিয়ন",
-                                                    "৬. দেহুন্দা ইউনিয়ন",
-                                                    "৭. সুতারপাড়া ইউনিয়ন",
-                                                    "৮. গুনধর ইউনিয়ন",
-                                                    "৯. জয়কা ইউনিয়ন",
-                                                    "১০. জাফরাবাদ ইউনিয়ন",
-                                                    "১১. নোয়াবাদ ইউনিয়ন"
-                                                )
-                                                val displayUnions = if (isEnglish) {
-                                                    listOf(
-                                                        "1. Kadirjangal Union",
-                                                        "2. Gujadia Union",
-                                                        "3. Kiraton Union",
-                                                        "4. Bargharia Union",
-                                                        "5. Niamatpur Union",
-                                                        "6. Dehunda Union",
-                                                        "7. Sutarpara Union",
-                                                        "8. Gunadhar Union",
-                                                        "9. Jaika Union",
-                                                        "10. Jafrabad Union",
-                                                        "11. Noabad Union"
-                                                    )
-                                                } else unions
-
-                                                displayUnions.forEach { BulletPointItem(it) }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                // Removed union section block from here as per user request
                             }
                         }
                     }
@@ -3617,6 +3535,7 @@ fun ComplaintScreen(isEnglish: Boolean) {
     }
 }
 
+
 // -------------------------------------------------------------
 // USER ADMISTRATIVE PROFILE SCREEN (Tag: nav_item_profile)
 @Composable
@@ -3742,79 +3661,9 @@ fun ProfileScreen(isEnglish: Boolean, onCallHelpline: () -> Unit) {
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Text(userName, color = MinimalText, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
-                                if (isPhoneVerified) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = if (isEnglish) "Verified Citizen" else "ভেরিফাইড নাগরিক",
-                                        tint = KarimganjGreen,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
                             }
-                            Text(if (isEnglish) "Digital Citizen Identity Portal" else "ডিজিটাল নাগরিক আইডেন্টিটি পোর্টাল", color = MinimalMutedText, fontSize = 12.sp)
-
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(KarimganjGreen.copy(0.08f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text("UID: KMJ-309-901", color = KarimganjGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-
-                // Mobile Verification Status Card
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (isPhoneVerified) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                        contentDescription = null,
-                                        tint = if (isPhoneVerified) KarimganjGreen else KarimganjCrimson,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = if (isEnglish) "Citizen Mobile Verification" else "নাগরিক মোবাইল ভেরিফিকেশন",
-                                        color = MinimalText,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                                
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(if (isPhoneVerified) KarimganjGreen.copy(0.15f) else KarimganjCrimson.copy(0.15f))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = if (isEnglish) (if (isPhoneVerified) "Verified" else "Not Verified") else (if (isPhoneVerified) "ভেরিফাইড" else "ভেরিফাইড নয়"),
-                                        color = if (isPhoneVerified) KarimganjGreen else KarimganjCrimson,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "National Identity Card Number (NID)" else "জাতীয় পরিচয়পত্র নম্বর (NID)", value = userNid, icon = Icons.Default.CreditCard)
+                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "My Personal Bio/Tagline" else "ব্যক্তিগত সংক্ষিপ্ত বিবরণী (বায়ো)", value = userBio, icon = Icons.Default.Info)
                             
                             Divider(color = CardBorderColor)
                             
@@ -3869,166 +3718,78 @@ fun ProfileScreen(isEnglish: Boolean, onCallHelpline: () -> Unit) {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                                .padding(16.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = if (isEnglish) "My Citizen Profile & Information" else "আমার নাগরিক পরিচিতি ও তথ্য",
-                                    color = MinimalText,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp
-                                )
-                                TextButton(
-                                    onClick = {
-                                        editName = userName
-                                        editAddress = userAddress
-                                        editNid = userNid
-                                        editBio = userBio
-                                        showEditDialog = true
-                                    },
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Icon(Icons.Default.Edit, contentDescription = if (isEnglish) "Edit" else "সম্পাদনা", tint = KarimganjGreen, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(if (isEnglish) "Edit" else "পরিমার্জন করুন", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Divider(color = CardBorderColor)
-
-                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "Citizen Full Name" else "নাগরিক পূর্ণ নাম", value = userName, icon = Icons.Default.Person)
-                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "Permanent & Present Address" else "স্থায়ী ও বর্তমান ঠিকানা", value = userAddress, icon = Icons.Default.LocationOn)
-                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "National Identity Card Number (NID)" else "জাতীয় পরিচয়পত্র নম্বর (NID)", value = userNid, icon = Icons.Default.Fingerprint)
-                            ProfileDetailItem(isHeader = true, label = if (isEnglish) "Detailed Profile & Biography" else "বিস্তারিত প্রোফাইল ও বিবরণ", value = userBio, icon = Icons.Default.Description)
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Button(
-                                onClick = {
-                                    editName = userName
-                                    editAddress = userAddress
-                                    editNid = userNid
-                                    editBio = userBio
-                                    showEditDialog = true
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen),
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.fillMaxWidth().testTag("edit_profile_trigger")
-                            ) {
-                                Icon(Icons.Default.SettingsSuggest, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(if (isEnglish) "Update Profile Info" else "প্রোফাইল তথ্য আপডেট করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
+                            Text(
+                                text = if (isEnglish) "Personal Information" else "ব্যক্তিগত তথ্য",
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "$userName\n$userAddress\nNID: $userNid",
+                                color = Color.LightGray,
+                                fontSize = 14.sp,
+                                lineHeight = 20.sp
+                            )
                         }
                     }
                 }
 
-                // Quick Hotlines segment
-                item {
-                    Text(if (isEnglish) "Support & Government Hotlines:" else "সহায়তা ও সরকারি হটলাইন সমূহ:", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
+                /*
+                // Mobile Verification Dialog with OTP Simulation and Handshake token
+                val (verificationStep, setVerificationStep) = remember { mutableStateOf(0) }
+                val (inputPhone, setInputPhone) = remember { mutableStateOf("") }
+                val (inputOtp, setInputOtp) = remember { mutableStateOf("") }
+                val (generatedOtp, setGeneratedOtp) = remember { mutableStateOf("") }
+                val (isProcessing, setIsProcessing) = remember { mutableStateOf(false) }
+                val (verificationError, setVerificationError) = remember { mutableStateOf<String?>(null) }
+                val handshakeToken = "Ae0iMNfzBOkpoc2nfQLHqGS3ViE8wPxgxNMLaZ2m-iJ7erKO4P-tnIpl1r-ATVJd5M0f7T61wEfkKbf9iW9-QwgQNDVi_HRIxvW3_KTl4pbst6XlYRdBPr1vUGn-32XrXbsPwEyStIRA51ByyHWdZ0ru"
+                */
 
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HotlineProfileRow(if (isEnglish) "National Service & Info Helpline (333)" else "জাতীয় সেবা এবং তথ্য সহায়ক সেল (333)", if (isEnglish) "333" else "৩৩৩") {
-                                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:333")))
-                            }
-                            Divider(color = CardBorderColor)
-                            HotlineProfileRow(if (isEnglish) "National Emergency Service (999)" else "জাতীয় জরুরি সেবা আইন প্রয়োগ কেন্দ্র (999)", if (isEnglish) "999" else "৯৯৯") {
-                                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:999")))
-                            }
-                            Divider(color = CardBorderColor)
-                            HotlineProfileRow(if (isEnglish) "Violence Against Women Prevention Helpline (109)" else "নারীদের ওপর সহিংসতা প্রতিরোধ হেল্প সেল (109)", if (isEnglish) "109" else "১০৯") {
-                                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:109")))
-                            }
-                        }
-                    }
-                }
 
-                // System specs segment
-                item {
-                    Text(if (isEnglish) "Application Info & Connection Status:" else "অ্যাপ্লিকেশন তথ্য এবং সংযোগ স্ট্যাটাস:", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
-
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
-                        border = BorderStroke(1.dp, CardBorderColor)
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Column {
-                                Text(if (isEnglish) "Local Database Caching" else "লোকাল ডেটাবেস ক্যাশিং", color = MinimalMutedText, fontSize = 11.sp)
-                                Text(if (isEnglish) "Active SQLite Room Database 3.2" else "সক্রিয় SQLite Room Database ৩.২", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Divider(color = CardBorderColor)
-                            Column {
-                                Text(if (isEnglish) "Cloud Synchronization" else "ক্লাউড সিঙ্ক্রোনাইজেশন", color = MinimalMutedText, fontSize = 11.sp)
-                                Text(if (isEnglish) "Directly connected to Firebase Cloud Firestore" else "সরাসরি ফায়ারবেস ক্লাউড ফায়ারস্টোর যুক্ত", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Divider(color = CardBorderColor)
-                            Column {
-                                Text(if (isEnglish) "App Version" else "অ্যাপ সংস্করণ", color = MinimalMutedText, fontSize = 11.sp)
-                                Text(if (isEnglish) "Version 3.2.0 (Smart Bangladesh Special)" else "সংস্করণ ৩.২.০ (স্মার্ট বাংলাদেশ স্পেশাল)", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Beautiful interactive Profile Edit Modal Dialog Window
-            if (showEditDialog) {
-                AlertDialog(
-                    onDismissRequest = { showEditDialog = false },
-                    containerColor = Color(0xFF151E25), // CardBackgroundLight matching deep theme
+                /*
+                if (showVerificationDialog) {
+                */
+                    AlertDialog(
+                        onDismissRequest = { showVerificationDialog = false },
+                    containerColor = Color(0xFF151E25),
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.BorderColor, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(24.dp))
+                            Icon(Icons.Default.Phone, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(if (isEnglish) "Edit Citizen Profile" else "নাগরিক প্রোফাইল পরিমার্জন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Mobile Number Verification" else "মোবাইল নম্বর ভেরিফিকেশন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     },
                     text = {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState()),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(if (isEnglish) "Update details below to change your profile:" else "প্রোফাইল আপডেট করতে তথ্যগুলো পরিমার্জন করুন:", color = Color.LightGray, fontSize = 12.sp)
-
-                            // Name input
-                            OutlinedTextField(
-                                value = editName,
-                                onValueChange = { editName = it },
-                                label = { Text(if (isEnglish) "Full Name (Bangla or English)" else "পূর্ণ নাম (বাংলা বা ইংরেজি)", color = Color.Gray, fontSize = 12.sp) },
-                                modifier = Modifier.fillMaxWidth().testTag("edit_profile_name"),
-                                singleLine = true,
-                                colors = TextFieldDefaults.colors(
-                                    focusedTextColor = MinimalText,
-                                    unfocusedTextColor = MinimalText,
-                                    focusedContainerColor = MinimalBackground,
-                                    unfocusedContainerColor = MinimalBackground,
-                                    focusedLabelColor = KarimganjGreen,
-                                    focusedIndicatorColor = KarimganjGreen
+                            if (verificationStep == 0) {
+                                Text(
+                                    text = if (isEnglish) "Enter your 11-digit active mobile number to verify authenticity for online citizen chat and other portal services." else "করিমগঞ্জ অনলাইন নাগরিক চ্যাট এবং বিভিন্ন পোর্টাল সেবার সত্যতা নিশ্চিত করতে আপনার ১১ ডিজিটের সক্রিয় মোবাইল নম্বরটি প্রবেশ করান।",
+                                    color = Color.LightGray,
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.sp
                                 )
-                            )
 
-                            // Address input
-                            OutlinedTextField(
-                                value = editAddress,
-                                onValueChange = { editAddress = it },
-                                label = { Text(if (isEnglish) "Permanent & Present Address" else "স্থায়ী ও বর্তমান ঠিকানা", color = Color.Gray, fontSize = 12.sp) },
+                                OutlinedTextField(
+                                    value = inputPhone,
+                                    onValueChange = { inputPhone = it.filter { char -> char.isDigit() } },
+                                    label = { Text(if (isEnglish) "Active Mobile Number (e.g., 01712345678)" else "সক্রিয় মোবাইল নম্বর (যেমন, ০১৭১২৩৪৫৬৭৮)", color = Color.Gray, fontSize = 12.sp) },
+                                    modifier = Modifier.fillMaxWidth().testTag("verify_phone_input"),
+                                    singleLine = true,
+                                    colors = TextFieldDefaults.colors(
+                                        focusedTextColor = MinimalText,
+                                        unfocusedTextColor = MinimalText,
+                                        focusedContainerColor = MinimalBackground,
+                                        unfocusedContainerColor = MinimalBackground,
+                                        focusedLabelColor = KarimganjGreen,
+                                        focusedIndicatorColor = KarimganjGreen
+                                    )
+                                )�্থায়ী ও বর্তমান ঠিকানা", color = Color.Gray, fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth().testTag("edit_profile_address"),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
@@ -4114,189 +3875,8 @@ fun ProfileScreen(isEnglish: Boolean, onCallHelpline: () -> Unit) {
                 )
             }
 
-            // Mobile Verification Dialog with OTP Simulation and Handshake token
-            if (showVerificationDialog) {
-                var verificationStep by remember { mutableStateOf(0) } // 0: Enter phone, 1: Enter OTP
-                var inputPhone by remember { mutableStateOf("") }
-                var inputOtp by remember { mutableStateOf("") }
-                var generatedOtp by remember { mutableStateOf("") }
-                var isProcessing by remember { mutableStateOf(false) }
-                var verificationError by remember { mutableStateOf<String?>(null) }
-                val handshakeToken = "Ae0iMNfzBOkpoc2nfQLHqGS3ViE8wPxgxNMLaZ2m-iJ7erKO4P-tnIpl1r-ATVJd5M0f7T61wEfkKbf9iW9-QwgQNDVi_HRIxvW3_KTl4pbst6XlYRdBPr1vUGn-32XrXbsPwEyStIRA51ByyHWdZ0ru"
 
-                AlertDialog(
-                    onDismissRequest = { showVerificationDialog = false },
-                    containerColor = Color(0xFF151E25),
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Phone, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(if (isEnglish) "Mobile Number Verification" else "মোবাইল নম্বর ভেরিফিকেশন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        }
-                    },
-                    text = {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            if (verificationStep == 0) {
-                                Text(
-                                    text = if (isEnglish) "Enter your 11-digit active mobile number to verify authenticity for online citizen chat and other portal services." else "করিমগঞ্জ অনলাইন নাগরিক চ্যাট এবং বিভিন্ন পোর্টাল সেবার সত্যতা নিশ্চিত করতে আপনার ১১ ডিজিটের সক্রিয় মোবাইল নম্বরটি লিখুন।",
-                                    color = Color.LightGray,
-                                    fontSize = 13.sp,
-                                    lineHeight = 18.sp
-                                )
-
-                                OutlinedTextField(
-                                    value = inputPhone,
-                                    onValueChange = { inputPhone = it.filter { char -> char.isDigit() } },
-                                    label = { Text(if (isEnglish) "Mobile Number (e.g. 01712345678)" else "মোবাইল নম্বর (যেমন: 01712345678)", color = Color.Gray, fontSize = 12.sp) },
-                                    modifier = Modifier.fillMaxWidth().testTag("verify_phone_input"),
-                                    singleLine = true,
-                                    colors = TextFieldDefaults.colors(
-                                        focusedTextColor = MinimalText,
-                                        unfocusedTextColor = MinimalText,
-                                        focusedContainerColor = MinimalBackground,
-                                        unfocusedContainerColor = MinimalBackground,
-                                        focusedLabelColor = KarimganjGreen,
-                                        focusedIndicatorColor = KarimganjGreen
-                                    )
-                                )
-
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0x11, 0x9E, 0xF7, 0x1A)),
-                                    border = BorderStroke(1.dp, Color(0x11, 0x9E, 0xF7, 0x33))
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text(
-                                            text = if (isEnglish) "🔒 Security Gateway & Token Active" else "🔒 can-security-gateway",
-                                            color = Color(0xFF81D4FA),
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 11.sp
-                                        )
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = "Firebase Auth SMS Handshake Active\nToken: ${handshakeToken.take(35)}...",
-                                            color = Color.Gray,
-                                            fontSize = 9.sp,
-                                            lineHeight = 12.sp
-                                        )
-                                    }
-                                }
-
-                                if (verificationError != null) {
-                                    Text(verificationError!!, color = Color.Red, fontSize = 12.sp)
-                                }
-                            } else {
-                                Text(
-                                    text = if (isEnglish) "An OTP has been sent to +88$inputPhone to verify your number. Please enter the code." else "আপনার নম্বর +88$inputPhone ভেরিফাই করার জন্য ওটিপি (OTP) পাঠানো হয়েছে। অনুগ্রহ করে কোডটি লিখুন।",
-                                    color = Color.LightGray,
-                                    fontSize = 13.sp,
-                                    lineHeight = 18.sp
-                                )
-
-                                OutlinedTextField(
-                                    value = inputOtp,
-                                    onValueChange = { inputOtp = it.filter { char -> char.isDigit() } },
-                                    label = { Text(if (isEnglish) "6-Digit OTP Code (OTP)" else "৬-ডিজিটের ওটিপি কোড (OTP)", color = Color.Gray, fontSize = 12.sp) },
-                                    modifier = Modifier.fillMaxWidth().testTag("verify_otp_input"),
-                                    singleLine = true,
-                                    colors = TextFieldDefaults.colors(
-                                        focusedTextColor = MinimalText,
-                                        unfocusedTextColor = MinimalText,
-                                        focusedContainerColor = MinimalBackground,
-                                        unfocusedContainerColor = MinimalBackground,
-                                        focusedLabelColor = KarimganjGreen,
-                                        focusedIndicatorColor = KarimganjGreen
-                                    )
-                                )
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = if (isEnglish) "Didn't receive code?" else "কোড পাননি?",
-                                        color = Color.Gray,
-                                        fontSize = 12.sp
-                                    )
-                                    TextButton(
-                                        onClick = {
-                                            generatedOtp = (100000..999999).random().toString()
-                                            android.widget.Toast.makeText(
-                                                context,
-                                                if (isEnglish) "✉️ [Karimganj Smart Portal] OTP Code is: $generatedOtp" else "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
-                                                android.widget.Toast.LENGTH_LONG
-                                            ).show()
-                                        }
-                                    ) {
-                                        Text(if (isEnglish) "Resend" else "পুনরায় পাঠান", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-
-                                if (verificationError != null) {
-                                    Text(verificationError!!, color = Color.Red, fontSize = 12.sp)
-                                }
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                if (verificationStep == 0) {
-                                    if (inputPhone.length == 11) {
-                                        isProcessing = true
-                                        verificationError = null
-                                        generatedOtp = (100000..999999).random().toString()
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            if (isEnglish) "✉️ [Karimganj Smart Portal] OTP Code is: $generatedOtp" else "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
-                                            android.widget.Toast.LENGTH_LONG
-                                        ).show()
-                                        verificationStep = 1
-                                        isProcessing = false
-                                    } else {
-                                        verificationError = if (isEnglish) "Please enter a correct 11-digit mobile number." else "অনুগ্রহ করে একটি সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।"
-                                    }
-                                } else {
-                                    if (inputOtp == generatedOtp || inputOtp == "123456") {
-                                        isProcessing = true
-                                        sharedPrefs.edit().apply {
-                                            putString("user_phone", "+88$inputPhone")
-                                            putBoolean("phone_verified", true)
-                                            apply()
-                                        }
-                                        userPhone = "+88$inputPhone"
-                                        isPhoneVerified = true
-                                        showVerificationDialog = false
-                                        android.widget.Toast.makeText(context, if (isEnglish) "Congratulations! Your mobile number has been successfully verified." else "অভিনন্দন! আপনার মোবাইল নম্বরটি সফলভাবে ভেরিফাই করা হয়েছে।", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        verificationError = if (isEnglish) "Incorrect OTP code! Please enter the correct code." else "ভুল ওটিপি কোড! অনুগ্রহ করে সঠিক কোডটি দিন।"
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen),
-                            enabled = !isProcessing,
-                            modifier = Modifier.testTag("verify_confirm_btn")
-                        ) {
-                            if (isProcessing) {
-                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
-                            } else {
-                                Text(if (verificationStep == 0) (if (isEnglish) "Send OTP" else "ওটিপি পাঠান") else (if (isEnglish) "Confirm" else "নিশ্চিত করুন"), fontWeight = FontWeight.Bold, color = Color.White)
-                            }
-                        }
-                    },
-                    dismissButton = {
-                        TextButton(
-                            onClick = { showVerificationDialog = false }
-                        ) {
-                            Text(if (isEnglish) "Cancel" else "বাতিল", color = Color.Gray)
-                        }
-                    }
-                )
-            }
+            // End of dialogs area
         }
     }
 }
@@ -4354,17 +3934,18 @@ fun FullSubPageScreen(
                     )
                 }
                 val unions = listOf(
-                    UnionData("কাদিরজঙ্গল ইউনিয়ন", "চেয়ারম্যান: মোঃ আরজু মিয়া", "০১৭১১২২৩৩৪৪", "১১.৫ বর্গ কি.মি.", "২৪,৫০০ জন"),
-                    UnionData("গুজাদিয়া ইউনিয়ন", "চেয়ারম্যান: মোঃ রফিকুল ইসলাম", "০১৯১২২২৩৩৪৪", "১৩.৮ বর্গ কি.মি.", "২৮,২০০ জন"),
-                    UnionData("কিরাটন ইউনিয়ন", "চেয়ারম্যান: মোঃ দেলোয়ার হোসেন", "০১৬১১২২৩৩৪৪", "১০.২ বর্গ কি.মি.", "২২,১০০ জন"),
-                    UnionData("বারঘরিয়া ইউনিয়ন", "চেয়ারম্যান: মোঃ আশরাফ উদ্দিন", "০১৭২২৩৩৪৪৫৫", "১৫.০ বর্গ কি.মি.", "৩২,০০০ জন"),
-                    UnionData("লেহুন্দা ইউনিয়ন", "চেয়ারম্যান: মোঃ শফিকুল ইসলাম", "০১৮১২২২৩৩৪৪", "১২.১ বর্গ কি.মি.", "২৫,৯০০ জন"),
-                    UnionData("সুতারপাড়া ইউনিয়ন", "চেয়ারম্যান: মোঃ হারুন-অর-রশিদ", "০১৫১১২২৩৩৪৪", "১৭.৪ বর্গ কি.মি.", "৩৫,৬০০ জন"),
-                    UnionData("গুনধর ইউনিয়ন", "চেয়ারম্যান: মোঃ আবু বকর সিদ্দিক", "০১৯৯৯৮৮৭৭৬৬", "১৪.২ বর্গ কি.মি.", "২৯,৪০০ জন"),
-                    UnionData("জয়কা ইউনিয়ন", "চেয়ারম্যান: মোঃ মোস্তফা কামাল", "০১৭৩৩৪৪৫৫৬৬", "১১.১ বর্গ কি.মি.", "২৩,৮০০ জন"),
-                    UnionData("নোয়াবাদ ইউনিয়ন", "চেয়ারম্যান: মোঃ আশরাফ আলী", "০১৬৬৬৫৫৪৪৩৩", "৯.৮ বর্গ কি.মি.", "২০,৫০০ জন"),
-                    UnionData("নিয়ামতপুর ইউনিয়ন", "চেয়ারম্যান: মোঃ মমিনুল ইসলাম", "০১৮৮৮৭৭৬৬৫৫", "১৬.৫ বর্গ কি.মি.", "৩৩,২০০ জন"),
-                    UnionData("করিমগঞ্জ পৌরসভা", "মেশর: মোঃ মুশতাকুর রহমান", "০১৯১১২২৩৩৪৪", "৮.৫ বর্গ কি.মি.", "৪৫,৩০০ জন")
+                    UnionData("১ নং কাদিরজঙ্গল ইউনিয়ন পরিষদ", "চেয়ারম্যান: মো: ফজলুর রহমান", "01731-496642", "৫,৫৮০ একর", "৩৩,৭২৪ জন", "http://kadirjangalup.kishoreganj.gov.bd/"),
+                    UnionData("২ নং গুজাদিয়া ইউনিয়ন পরিষদ", "চেয়ারম্যান: মোঃ রফিকুল ইসলাম", "01716-241357", "৬,৫৪২ একর", "৩৬,৭৬৮ জন", "http://gujadiaup.kishoreganj.gov.bd/"),
+                    UnionData("৩ নং কিরাটন ইউনিয়ন পরিষদ", "চেয়ারম্যান: মো : ইবাদুর রহমান শামীম", "01989-255499", "১,৭৩১ একর", "৯,৫৭১ জন", "http://kiratonup.kishoreganj.gov.bd/"),
+                    UnionData("৪ নং বারঘরিয়া ইউনিয়ন পরিষদ", "চেয়ারম্যান: আয়ুব উদ্দীন", "01736-437903", "২,৫০৬ একর", "১৩,৭০৬ জন", "http://karimgonj.kishoreganj.gov.bd/"),
+                    UnionData("৫ নং নিয়ামতপুর ইউনিয়ন পরিষদ", "চেয়ারম্যান: মখদুম কবীর তন্ময়", "01711-143948", "৩,২০২ একর", "২৪,৭৫৮ জন", "http://karimgonj.kishoreganj.gov.bd/"),
+                    UnionData("৬ নং দেহুন্দা ইউনিয়ন পরিষদ", "চেয়ারম্যান: মশিউর রহমান", "01716-325430", "২,৩৯৭ একর", "২০,৮৯৬ জন", "http://dehundaup.kishoreganj.gov.bd/"),
+                    UnionData("৭ নং সুতারপাড়া ইউনিয়ন পরিষদ", "চেয়ারম্যান: মো : হারুণ অর রশীদ", "01789-568289", "৭,৪৫১ একর", "১৫,৮৪২ জন", "http://sutarparaup.kishoreganj.gov.bd/"),
+                    UnionData("৮ নং গুনধর ইউনিয়ন পরিষদ", "চেয়ারম্যান: মোঃ আবুছায়েম রাসেল", "01712-856616", "৬,৫৫৮ একর", "৩০,০৫১ জন", "http://gunodharup.kishoreganj.gov.bd/"),
+                    UnionData("৯ নং জয়কা ইউনিয়ন পরিষদ", "চেয়ারম্যান: মো : আশরাফ উদ্দীন", "01741-393843", "৬,৪০৭ একর", "৩৭,০৯৪ জন", "http://joykaup.kishoreganj.gov.bd/"),
+                    UnionData("১০ নং জাফরাবাদ ইউনিয়ন পরিষদ", "চেয়ারম্যান: সাইফ উদ্দীন ফকির", "01911-924935", "২,৩৯০ একর", "১৪,৫৩৭ জন", "http://zafrabadup.kishoreganj.gov.bd/"),
+                    UnionData("১১ নং নোয়াবাদ ইউনিয়ন পরিষদ", "চেয়ারম্যান: মো : রুহুল আমীন কাজী", "01728-306372", "২,৮৪১ একর", "২৪,০১৬ জন", "http://noabadup.kishoreganj.gov.bd/"),
+                    UnionData("করিমগঞ্জ পৌরসভা", "মেয়র: মোঃ মুশতাকুর রহমান", "01911-223344", "৯টি ওয়ার্ড ও ১৭টি মহল্লা", "২৪,২০৯ ভোটার", "http://karimgonj.kishoreganj.gov.bd/")
                 )
                 items(unions) { union ->
                     Card(
@@ -4388,6 +3969,22 @@ fun FullSubPageScreen(
                                 colors = IconButtonDefaults.iconButtonColors(containerColor = KarimganjGreen.copy(alpha = 0.15f))
                             ) {
                                 Icon(Icons.Default.Phone, contentDescription = "কল করুন", tint = KarimganjGreen)
+                            }
+                        }
+                        if (union.website.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(
+                                onClick = { 
+                                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(union.website))
+                                    context.startActivity(webIntent)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E3A8A)),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Default.Language, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("ইউনিয়ন পোর্টাল দেখুন", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -4715,7 +4312,7 @@ fun FullSubPageScreen(
     }
 }
 
-data class UnionData(val name: String, val leader: String, val phone: String, val area: String, val population: String)
+data class UnionData(val name: String, val leader: String, val phone: String, val area: String, val population: String, val website: String = "")
 data class ServiceDetail(val title: String, val desc: String, val link: String)
 data class GuideStep(val title: String, val instructions: String)
 data class VetService(val title: String, val desc: String, val phone: String)
