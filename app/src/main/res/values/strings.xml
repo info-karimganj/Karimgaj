@@ -18,6 +18,6 @@
     <string name="err_load">তথ্য লোড করতে সাধারণ সমস্যা হয়েছে। অফলাইন ক্যাশ প্রদর্শিত হচ্ছে।</string>
     <string name="empty_msg">কোনো তথ্য পাওয়া যায়নি।</string>
     <string name="emergency_headline">জরুরি হেল্পলাইন</string>
-    <string name="about_headline">আমাদের করিমগঞ্জ</string>
+    <string name="about_headline">উপজেলা তথ্য ও পরিচিতি</string>
     <string name="btn_details">বিস্তারিত দেখুন</string>
 </resources>

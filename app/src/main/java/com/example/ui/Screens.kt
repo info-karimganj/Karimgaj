@@ -37,7 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.DataSnapshot
@@ -48,19 +51,121 @@ import com.example.data.*
 import com.example.viewmodel.MainViewModel
 import com.example.viewmodel.UiState
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.BorderStroke
+
+import androidx.compose.runtime.compositionLocalOf
+
+val LocalThemeState = compositionLocalOf { false }
 
 // Central Theme Colors for Karimganj (Beautiful Solid Red/Green Light Theme)
 val KarimganjGreen = Color(0xFF2E7D32) // Solid Green: #2E7D32
-val KarimganjLightGreen = Color(0xFFE8F5E9) // Soft light green: #E8F5E9
 val KarimganjCrimson = Color(0xFFB71C1C) // Brand Deep Red: #B71C1C
 val KarimganjYellow = Color(0xFFF59E0B) // Amber/Yellow: #F59E0B
-val CardBackgroundLight = Color(0xFFFFFFFF) // Solid White Card Background
-val MinimalBackground = Color(0xFFF5F6F8) // Clean off-white background
-val MinimalText = Color(0xFF111827) // Solid Dark slate gray text for maximum contrast
-val MinimalMutedText = Color(0xFF6B7280) // Muted slate gray for secondary descriptions
-val CardBorderColor = Color(0xFFF0F0F0) // Very thin clean border #F0F0F0
+
+val KarimganjLightGreen: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF14532D).copy(alpha = 0.45f) else Color(0xFFE8F5E9)
+
+val CardBackgroundLight: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF1E293B) else Color(0xFFFFFFFF)
+
+val MinimalBackground: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF0F172A) else Color(0xFFF5F6F8)
+
+val MinimalText: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFFF9FAFB) else Color(0xFF111827)
+
+val MinimalMutedText: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF9CA3AF) else Color(0xFF6B7280)
+
+val CardBorderColor: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF334155) else Color(0xFFF0F0F0)
+
 val SplashGradient = Brush.verticalGradient(listOf(Color(0xFFB71C1C), Color(0xFFC62828))) // Brand red splash
-val HeaderRed = Color(0xFFB71C1C) // Solid red header
+
+val HeaderRed: Color
+    @Composable
+    get() = if (LocalThemeState.current) Color(0xFF991B1B) else Color(0xFFB71C1C)
+
+@Composable
+fun WavingBangladeshFlag(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "flag_pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse_alpha"
+    )
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+
+        // Deep emerald background
+        drawRect(
+            color = Color(0xFF0B2D24)
+        )
+
+        // Soft, muted flag green
+        drawRect(
+            color = Color(0xFF1E6F58).copy(alpha = pulseAlpha * 0.45f)
+        )
+
+        // Draw standard red circle of Bangladesh's flag (slightly offset to the left at 42% width)
+        val circleCenterX = width * 0.42f
+        val circleCenterY = height / 2f
+        val circleRadius = height * 0.33f
+
+        drawCircle(
+            color = Color(0xFFE05364).copy(alpha = pulseAlpha * 0.5f),
+            radius = circleRadius,
+            center = androidx.compose.ui.geometry.Offset(circleCenterX, circleCenterY)
+        )
+    }
+}
+
+@Composable
+fun WavingFlagIcon() {
+    val infiniteTransition = rememberInfiniteTransition(label = "flag_icon_pulse")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "rotation"
+    )
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Text(
+        text = "🇧🇩",
+        fontSize = 18.sp,
+        modifier = Modifier
+            .graphicsLayer(
+                rotationZ = rotation,
+                scaleX = scale,
+                scaleY = scale
+            )
+    )
+}
 
 // -------------------------------------------------------------
 // SPLASH SCREEN
@@ -165,26 +270,18 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToTab: (Int) -> Unit
 ) {
-    var uiCategoryFilter by remember { mutableStateOf<String?>(null) }
+    val uiCategoryFilter by viewModel.uiCategoryFilter.collectAsStateWithLifecycle()
+    val activeFullSubPage by viewModel.activeFullSubPage.collectAsStateWithLifecycle()
+    val isEnglish by viewModel.isEnglish.collectAsStateWithLifecycle()
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val weatherState by viewModel.weatherState.collectAsStateWithLifecycle()
     
     val upazilaInfoState by viewModel.upazilaInfo.collectAsStateWithLifecycle()
     val filteredItemsState by viewModel.filteredItems.collectAsStateWithLifecycle()
     
     val context = LocalContext.current
-
-    // App level state to display a full screen detail view instead of standard dialogs
-    var activeFullSubPage by remember { mutableStateOf<String?>(null) }
-
-    // Intercept back button to dismiss any open sub-page or category filter
-    BackHandler(enabled = activeFullSubPage != null || uiCategoryFilter != null) {
-        if (activeFullSubPage != null) {
-            activeFullSubPage = null
-        } else if (uiCategoryFilter != null) {
-            uiCategoryFilter = null
-        }
-    }
+    var isAdminAreaExpanded by remember { mutableStateOf(false) }
 
     // If a category filter is active, let's update the viewModel selectedCategory securely
     LaunchedEffect(uiCategoryFilter) {
@@ -202,7 +299,7 @@ fun HomeScreen(
                 ExtendedFloatingActionButton(
                     text = { Text("লাইভ চ্যাট", fontWeight = FontWeight.Bold, color = Color.White) },
                     icon = { Icon(Icons.Default.Chat, contentDescription = "লাইভ চ্যাট", tint = Color.White) },
-                    onClick = { activeFullSubPage = "chat" },
+                    onClick = { viewModel.setActiveFullSubPage("chat") },
                     containerColor = KarimganjGreen,
                     modifier = Modifier.testTag("fab_realtime_chat")
                 )
@@ -226,7 +323,7 @@ fun HomeScreen(
                 TopAppBar(
                     title = { Text(titleString, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
                     navigationIcon = {
-                        IconButton(onClick = { activeFullSubPage = null }) {
+                        IconButton(onClick = { viewModel.setActiveFullSubPage(null) }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "ফিরে যান", tint = Color.White)
                         }
                     },
@@ -237,76 +334,9 @@ fun HomeScreen(
                 TopAppBar(
                     title = { Text(uiCategoryFilter!!, color = Color.White, fontWeight = FontWeight.Bold) },
                     navigationIcon = {
-                        IconButton(onClick = { uiCategoryFilter = null }) {
+                        IconButton(onClick = { viewModel.setUiCategoryFilter(null) }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "ফিরে যান", tint = Color.White)
                         }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
-                )
-            } else {
-                // Main Dashboard Header (matching the brand exact layout in user's design)
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.2f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Dashboard,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "করিমগঞ্জ ডিজিটাল সেবা",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize = 18.sp,
-                                    letterSpacing = (-0.5).sp
-                                )
-                                Text(
-                                    text = "জনগণের দোরগোড়ায় স্মার্ট পরিষেবা",
-                                    color = Color(0xFFFFCDD2),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 0.1.sp
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        // Language Chip Button
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color.White.copy(alpha = 0.2f))
-                                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                                .clickable { /* Static trigger */ }
-                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Text("EN", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                        // Light-Dark sun icon
-                        IconButton(
-                            onClick = { /* Toggle */ },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f))
-                                .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                        ) {
-                            Icon(Icons.Default.WbSunny, contentDescription = "থিম পরিবর্তন", tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
                 )
@@ -322,11 +352,11 @@ fun HomeScreen(
         ) {
             if (activeFullSubPage != null) {
                 if (activeFullSubPage == "chat") {
-                    RealtimeChatScreen(onBack = { activeFullSubPage = null })
+                    RealtimeChatScreen(viewModel = viewModel, onBack = { viewModel.setActiveFullSubPage(null) })
                 } else {
                     FullSubPageScreen(
                         pageId = activeFullSubPage!!,
-                        onBack = { activeFullSubPage = null },
+                        onBack = { viewModel.setActiveFullSubPage(null) },
                         context = context
                     )
                 }
@@ -351,11 +381,240 @@ fun HomeScreen(
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                items(items, key = { it.id }) { item ->
-                                    CivicItemCard(
-                                        item = item,
-                                        onItemClick = { onNavigateToDetail(item.id) }
-                                    )
+                                if (uiCategoryFilter == "প্রশাসন") {
+                                    val officers = items.filter { it is GovernmentOffice && !it.id.startsWith("office_staff_") }
+                                    val staff = items.filter { it is GovernmentOffice && it.id.startsWith("office_staff_") }
+                                    val otherItems = items.filter { it !is GovernmentOffice }
+
+                                    if (officers.isNotEmpty()) {
+                                        item {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 16.dp, bottom = 8.dp)
+                                                    .background(
+                                                        color = Color(0xFFB71C1C).copy(alpha = 0.05f),
+                                                        shape = RoundedCornerShape(12.dp)
+                                                     )
+                                                    .border(
+                                                        border = BorderStroke(1.dp, Color(0xFFB71C1C).copy(alpha = 0.12f)),
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    )
+                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(Color(0xFFB71C1C), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.AdminPanelSettings,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = if (isEnglish) "Chief Administrative Officers" else "প্রধান কর্মকর্তাবৃন্দ",
+                                                        fontSize = 15.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFFB71C1C),
+                                                        letterSpacing = (-0.1).sp
+                                                    )
+                                                    Text(
+                                                        text = if (isEnglish) "Core leadership of Karimganj Upazila" else "করিমগঞ্জ উপজেলার শীর্ষ প্রশাসনিক নেতৃত্ব",
+                                                        fontSize = 10.sp,
+                                                        color = Color.Gray
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        items(officers, key = { it.id }) { item ->
+                                            AdministrationItemCard(
+                                                item = item as GovernmentOffice,
+                                                isEnglish = isEnglish,
+                                                onItemClick = { onNavigateToDetail(item.id) }
+                                            )
+                                        }
+                                    }
+
+                                    if (staff.isNotEmpty()) {
+                                        item {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(top = 16.dp, bottom = 8.dp)
+                                                    .background(
+                                                        color = Color(0xFF00695C).copy(alpha = 0.05f),
+                                                        shape = RoundedCornerShape(12.dp)
+                                                     )
+                                                    .border(
+                                                        border = BorderStroke(1.dp, Color(0xFF00695C).copy(alpha = 0.12f)),
+                                                        shape = RoundedCornerShape(12.dp)
+                                                    )
+                                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .background(Color(0xFF00695C), CircleShape),
+                                                     contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.People,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(18.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = if (isEnglish) "Upazila Parishad Staff" else "উপজেলা পরিষদের কর্মচারীবৃন্দ (পিডিএফ ডাটা)",
+                                                        fontSize = 15.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF00695C),
+                                                        letterSpacing = (-0.1).sp
+                                                    )
+                                                    Text(
+                                                        text = if (isEnglish) "Support staff database and details" else "সহায়ক কর্মকর্তা ও কর্মচারী তালিকা",
+                                                        fontSize = 10.sp,
+                                                        color = Color.Gray
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        items(staff, key = { it.id }) { item ->
+                                            AdministrationItemCard(
+                                                item = item as GovernmentOffice,
+                                                isEnglish = isEnglish,
+                                                onItemClick = { onNavigateToDetail(item.id) }
+                                            )
+                                        }
+                                    }
+
+                                    if (otherItems.isNotEmpty()) {
+                                        items(otherItems, key = { it.id }) { item ->
+                                            CivicItemCard(
+                                                item = item,
+                                                isEnglish = isEnglish,
+                                                onItemClick = { onNavigateToDetail(item.id) }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    items(items, key = { it.id }) { item ->
+                                        CivicItemCard(
+                                            item = item,
+                                            isEnglish = isEnglish,
+                                            onItemClick = { onNavigateToDetail(item.id) }
+                                        )
+                                    }
+                                }
+
+                                // Append administrative area information if category is "প্রশাসন"
+                                if (uiCategoryFilter == "প্রশাসন") {
+                                    item {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Card(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+                                            shape = RoundedCornerShape(14.dp),
+                                            border = BorderStroke(1.dp, Color(0xFFEEEEEE)),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                                        ) {
+                                            Column(modifier = Modifier.padding(16.dp)) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable { isAdminAreaExpanded = !isAdminAreaExpanded },
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(40.dp)
+                                                            .background(Color(0xFFFFEBEE), shape = CircleShape), // Soft light red circle
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.AccountBalance,
+                                                            contentDescription = null,
+                                                            tint = Color(0xFFB71C1C), // Deep Red
+                                                            modifier = Modifier.size(22.dp)
+                                                        )
+                                                    }
+                                                    Spacer(modifier = Modifier.width(14.dp))
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = if (isEnglish) "Administrative Area" else "প্রশাসনিক সীমানা ও এলাকা",
+                                                            fontSize = 16.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color(0xFFB71C1C)
+                                                        )
+                                                        Spacer(modifier = Modifier.height(2.dp))
+                                                        Text(
+                                                            text = if (isEnglish) "1 Municipality and 11 Unions (Tap to view)" else "১টি পৌরসভা ও ১১টি ইউনিয়ন (বিস্তারিত দেখতে চাপুন)",
+                                                            fontSize = 12.sp,
+                                                            color = Color.Gray
+                                                        )
+                                                    }
+                                                    Icon(
+                                                        imageVector = if (isAdminAreaExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                                        contentDescription = if (isAdminAreaExpanded) "Collapse" else "Expand",
+                                                        tint = Color(0xFFB71C1C),
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                }
+                                                
+                                                if (isAdminAreaExpanded) {
+                                                    Spacer(modifier = Modifier.height(12.dp))
+                                                    Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                                SubSectionHeader(if (isEnglish) "Municipality" else "পৌরসভা")
+                                                BulletPointItem(if (isEnglish) "Karimganj Municipality" else "করিমগঞ্জ পৌরসভা")
+                                                
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                                SubSectionHeader(if (isEnglish) "Unions" else "ইউনিয়নসমূহ")
+                                                val unions = listOf(
+                                                    "১. কাদিরজঙ্গল ইউনিয়ন",
+                                                    "২. গুজাদিয়া ইউনিয়ন",
+                                                    "৩. কিরাটন ইউনিয়ন",
+                                                    "৪. বারঘরিয়া ইউনিয়ন",
+                                                    "৫. নিয়ামতপুর ইউনিয়ন",
+                                                    "৬. দেহুন্দা ইউনিয়ন",
+                                                    "৭. সুতারপাড়া ইউনিয়ন",
+                                                    "৮. গুনধর ইউনিয়ন",
+                                                    "৯. জয়কা ইউনিয়ন",
+                                                    "১০. জাফরাবাদ ইউনিয়ন",
+                                                    "১১. নোয়াবাদ ইউনিয়ন"
+                                                )
+                                                val displayUnions = if (isEnglish) {
+                                                    listOf(
+                                                        "1. Kadirjangal Union",
+                                                        "2. Gujadia Union",
+                                                        "3. Kiraton Union",
+                                                        "4. Bargharia Union",
+                                                        "5. Niamatpur Union",
+                                                        "6. Dehunda Union",
+                                                        "7. Sutarpara Union",
+                                                        "8. Gunadhar Union",
+                                                        "9. Jaika Union",
+                                                        "10. Jafrabad Union",
+                                                        "11. Noabad Union"
+                                                    )
+                                                } else unions
+
+                                                displayUnions.forEach { BulletPointItem(it) }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -374,77 +633,167 @@ fun HomeScreen(
                         }
                     }
 
-                    // Welcome scenic banner with Weather Badge and Glassmorphic Greeting Card
+                    // Welcome scenic banner with integrated TopAppBar, Weather Badge, and Glassmorphic Greeting Card
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(230.dp)
+                                .height(310.dp)
+                                .background(HeaderRed) // fallback background
                         ) {
-                            // 1. Unsplash Scenic Image of Bangladesh Green Paddy Fields
-                            SubcomposeAsyncImage(
-                                model = "https://images.unsplash.com/photo-1625236290579-3ec1e79b34ba?w=640&q=85&fit=crop",
-                                contentDescription = "Karimganj Rural Landscape",
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop,
-                                loading = {
-                                    Box(modifier = Modifier.fillMaxSize().background(KarimganjGreen.copy(alpha = 0.2f)))
-                                }
+                            // 1. Full waving Bangladesh flag behind everything
+                            WavingBangladeshFlag(
+                                modifier = Modifier.fillMaxSize()
                             )
-                            
-                            // 2. Linear dark overlay gradient to ensure high readability of text
+
+                            // 2. High-contrast premium scrim gradient for optimal legibility
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(
                                         Brush.verticalGradient(
                                             colors = listOf(
-                                                Color.Black.copy(alpha = 0.15f),
-                                                Color.Black.copy(alpha = 0.65f)
+                                                Color.Black.copy(alpha = 0.3f),
+                                                Color.Black.copy(alpha = 0.05f),
+                                                Color.Black.copy(alpha = 0.5f)
                                             )
                                         )
                                     )
                             )
-                            
-                            // 3. Status/Scene details overlaid at the bottom
+
+                            // 3. Content layout combining status bar padding, header, and greeting
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(14.dp),
-                                verticalArrangement = Arrangement.Bottom
+                                    .statusBarsPadding()
                             ) {
-                                // Weather Badge (matching the HTML weather-badge selector)
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(Color.White.copy(alpha = 0.18f))
-                                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
-                                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    Text("☀️ ", fontSize = 11.sp)
-                                    Text("করিমগঞ্জ, ৩২°C, রৌদ্রজ্জ্বল", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                
-                                Spacer(modifier = Modifier.height(10.dp))
-                                
-                                // Glassmorphic Greeting Card with left red accent border
+                                // Transparent TopAppBar matching the layout
+                                TopAppBar(
+                                    title = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(40.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(Color.White.copy(alpha = 0.2f))
+                                                    .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Dashboard,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = if (isEnglish) "Karimganj Digital Sheba" else "করিমগঞ্জ ডিজিটাল সেবা",
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 18.sp,
+                                                    letterSpacing = (-0.5).sp
+                                                )
+                                                Text(
+                                                    text = if (isEnglish) "Smart Service at Your Doorstep" else "জনগণের দোরগোড়ায় স্মার্ট পরিষেবা",
+                                                    color = Color(0xFFFFCDD2),
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    letterSpacing = 0.1.sp
+                                                )
+                                            }
+                                        }
+                                    },
+                                    actions = {
+                                        // Language Chip Button
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(Color.White.copy(alpha = 0.2f))
+                                                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                                .clickable { viewModel.toggleLanguage() }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(if (isEnglish) "BN" else "EN", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        // Light-Dark sun icon
+                                        val isDark = LocalThemeState.current
+                                        IconButton(
+                                            onClick = { viewModel.toggleDarkMode() },
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(Color.White.copy(alpha = 0.2f))
+                                                .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                                        ) {
+                                            Icon(
+                                                imageVector = if (isDark) Icons.Default.NightsStay else Icons.Default.WbSunny,
+                                                contentDescription = "থিম পরিবর্তন",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    },
+                                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                                )
+
+                                Spacer(modifier = Modifier.weight(1f))
+
+                                // Status/Scene details overlaid at the bottom
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-                                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-                                        .drawBehind {
-                                            // Draw left red accent border line exactly 4dp thick
-                                            drawRect(
-                                                color = Color(0xFFEF5350),
-                                                size = androidx.compose.ui.geometry.Size(4.dp.toPx(), this.size.height)
-                                            )
-                                        }
-                                        .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.Bottom
                                 ) {
-                                    Text("আস্সালামু আলাইকুম 🌿", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Text("আপনার ডিজিটাল সেবায় স্বাগতম", color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                    // Weather Badge (matching the HTML weather-badge selector)
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(20.dp))
+                                            .background(Color.White.copy(alpha = 0.18f))
+                                            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        val currentEmoji = weatherState?.emoji ?: "☀️"
+                                        val currentTemp = weatherState?.tempText ?: "৩২"
+                                        val currentCondition = weatherState?.conditionText ?: "রৌদ্রজ্জ্বল"
+                                        val displayCondition = if (isEnglish) {
+                                            when (currentCondition) {
+                                                "রৌদ্রজ্জ্বল" -> "Sunny"
+                                                "বৃষ্টি" -> "Rainy"
+                                                "মেঘলা" -> "Cloudy"
+                                                else -> currentCondition
+                                            }
+                                        } else currentCondition
+                                        val displayLoc = if (isEnglish) "Karimganj" else "করিমগঞ্জ"
+                                        Text("$currentEmoji ", fontSize = 11.sp)
+                                        Text("$displayLoc, $currentTemp°C, $displayCondition", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    
+                                    // Glassmorphic Greeting Card with left red accent border
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                                            .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                                            .drawBehind {
+                                                // Draw left red accent border line exactly 4dp thick
+                                                drawRect(
+                                                    color = Color(0xFFEF5350),
+                                                    size = androidx.compose.ui.geometry.Size(4.dp.toPx(), this.size.height)
+                                                )
+                                            }
+                                            .padding(start = 14.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)
+                                    ) {
+                                        Text(if (isEnglish) "Assalamu Alaikum 🌿" else "আস্সালামু আলাইকুম 🌿", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        Text(if (isEnglish) "Welcome to your digital service" else "আপনার ডিজিটাল সেবায় স্বাগতম", color = Color.White.copy(alpha = 0.85f), fontSize = 10.5.sp)
+                                    }
                                 }
                             }
                         }
@@ -455,7 +804,7 @@ fun HomeScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                                .background(CardBackgroundLight, RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                                 .padding(top = 16.dp, start = 12.dp, end = 12.dp)
                         ) {
                             Column {
@@ -520,50 +869,151 @@ fun HomeScreen(
                                 Spacer(modifier = Modifier.height(20.dp))
                                 
                                 // Red and Green Section Title
-                                SectionHeader(title = "আমাদের প্রধান সেবাসমূহ")
+                                SectionHeader(title = if (isEnglish) "Our Main Services" else "আমাদের প্রধান সেবাসমূহ")
                                 Spacer(modifier = Modifier.height(14.dp))
                             }
                         }
                     }
 
-                    // Core Service Grid wrapped inside a continuous white container
+                    // Core Service Grid wrapped inside a continuous white container with 3 horizontally scrollable rows for all 15 features
                     item {
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White)
+                                .background(CardBackgroundLight)
                                 .padding(horizontal = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            // Row 1 - Index 0, 1, 2
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                DashboardCircleItem("উপজেলা তথ্য", Icons.Default.Info, Color(0xFF10B981), click = { uiCategoryFilter = "প্রশাসন" }, index = 0)
-                                DashboardCircleItem("ইউনিয়ন তথ্য", Icons.Default.AccountBalance, Color(0xFF3B82F6), click = { activeFullSubPage = "union" }, index = 1)
-                                DashboardCircleItem("ভূমি তথ্য", Icons.Default.Landscape, Color(0xFF8B5CFD), click = { activeFullSubPage = "land" }, index = 2)
+                            // Row 1 - Index 0 to 4
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Administration" else "প্রশাসন",
+                                    icon = Icons.Default.AdminPanelSettings,
+                                    color = Color(0xFFB71C1C),
+                                    click = { viewModel.setUiCategoryFilter("প্রশাসন") },
+                                    index = 0
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Union Info" else "ইউনিয়ন তথ্য",
+                                    icon = Icons.Default.AccountBalance,
+                                    color = Color(0xFF3B82F6),
+                                    click = { viewModel.setActiveFullSubPage("union") },
+                                    index = 1
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Land Info" else "ভূমি তথ্য",
+                                    icon = Icons.Default.Landscape,
+                                    color = Color(0xFF8B5CFD),
+                                    click = { viewModel.setActiveFullSubPage("land") },
+                                    index = 2
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "E-Court" else "ই-কোর্ট",
+                                    icon = Icons.Default.Gavel,
+                                    color = Color(0xFF6366F1),
+                                    click = { viewModel.setActiveFullSubPage("court") },
+                                    index = 3
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Emergency" else "জরুরি সেবা",
+                                    icon = Icons.Default.Campaign,
+                                    color = Color(0xFFF43F5E),
+                                    click = { viewModel.selectTab(4) },
+                                    index = 4
+                                )
                             }
-                            // Row 2 - Index 3, 4, 5
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                DashboardCircleItem("ই-কোর্ট", Icons.Default.Gavel, Color(0xFF6366F1), click = { activeFullSubPage = "court" }, index = 3)
-                                DashboardCircleItem("জরুরি সেবা", Icons.Default.Campaign, Color(0xFFF43F5E), click = { onNavigateToTab(4) }, index = 4)
-                                DashboardCircleItem("ডিজিটাল সেবা", Icons.Default.Laptop, Color(0xFF06B6D4), click = { onNavigateToTab(1) }, index = 5)
+
+                            // Row 2 - Index 5 to 9
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Digital Desk" else "ডিজিটাল সেবা",
+                                    icon = Icons.Default.Laptop,
+                                    color = Color(0xFF06B6D4),
+                                    click = { viewModel.selectTab(1) },
+                                    index = 5
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Complaint Box" else "অভিযোগ বক্স",
+                                    icon = Icons.Default.Feedback,
+                                    color = Color(0xFFF59E0B),
+                                    click = { viewModel.selectTab(2) },
+                                    index = 6
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Hospitals" else "হাসপাতাল",
+                                    icon = Icons.Default.LocalHospital,
+                                    color = Color(0xFFEC4899),
+                                    click = { viewModel.setUiCategoryFilter("স্বাস্থ্য") },
+                                    index = 7
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Schools" else "শিক্ষা প্রতিষ্ঠান",
+                                    icon = Icons.Default.School,
+                                    color = Color(0xFF3B82F6),
+                                    click = { viewModel.setUiCategoryFilter("শিক্ষা") },
+                                    index = 8
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Citizen Guide" else "নাগরিক নির্দেশিকা",
+                                    icon = Icons.Default.MenuBook,
+                                    color = Color(0xFF0D9488),
+                                    click = { viewModel.setActiveFullSubPage("guide") },
+                                    index = 9
+                                )
                             }
-                            // Row 3 - Index 6, 7, 8
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                DashboardCircleItem("অভিযোগ বক্স", Icons.Default.Feedback, Color(0xFFF59E0B), click = { onNavigateToTab(2) }, index = 6)
-                                DashboardCircleItem("হাসপাতাল", Icons.Default.LocalHospital, Color(0xFFEC4899), click = { uiCategoryFilter = "স্বাস্থ্য" }, index = 7)
-                                DashboardCircleItem("শিক্ষা প্রতিষ্ঠান", Icons.Default.School, Color(0xFF3B82F6), click = { uiCategoryFilter = "শিক্ষা" }, index = 8)
-                            }
-                            // Row 4 - Index 9, 10, 11
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                DashboardCircleItem("নাগরিক নির্দেশিকা", Icons.Default.MenuBook, Color(0xFF0D9488), click = { activeFullSubPage = "guide" }, index = 9)
-                                DashboardCircleItem("প্রাণিসম্পদ দপ্তর", Icons.Default.Pets, Color(0xFF10B981), click = { activeFullSubPage = "livestock" }, index = 10)
-                                DashboardCircleItem("টুরিস্ট গাইড", Icons.Default.Map, Color(0xFFD4AF37), click = { uiCategoryFilter = "পর্যটন" }, index = 11)
-                            }
-                            // Row 5 - Index 12, 13, 14
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                DashboardCircleItem("মেডিকেল কলেজ", Icons.Default.School, Color(0xFF06B6D4), click = { uiCategoryFilter = "স্বাস্থ্য" }, index = 12)
-                                DashboardCircleItem("সুরক্ষা অ্যাম্বুলেন্স", Icons.Default.MedicalServices, Color(0xFFF97316), click = { activeFullSubPage = "ambulance" }, index = 13)
-                                DashboardCircleItem("নোটিশ বোর্ড", Icons.Default.VolumeUp, Color(0xFF9CA3AF), click = { activeFullSubPage = "notice" }, index = 14)
+
+                            // Row 3 - Index 10 to 14
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Livestock" else "প্রাণিসম্পদ দপ্তর",
+                                    icon = Icons.Default.Pets,
+                                    color = Color(0xFF10B981),
+                                    click = { viewModel.setActiveFullSubPage("livestock") },
+                                    index = 10
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Tourist Guide" else "টুরিস্ট গাইড",
+                                    icon = Icons.Default.Map,
+                                    color = Color(0xFFD4AF37),
+                                    click = { viewModel.setUiCategoryFilter("পর্যটন") },
+                                    index = 11
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Medical College" else "মেডিকেল কলেজ",
+                                    icon = Icons.Default.School,
+                                    color = Color(0xFF06B6D4),
+                                    click = { viewModel.setUiCategoryFilter("স্বাস্থ্য") },
+                                    index = 12
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Ambulance" else "সুরক্ষা অ্যাম্বুলেন্স",
+                                    icon = Icons.Default.MedicalServices,
+                                    color = Color(0xFFF97316),
+                                    click = { viewModel.setActiveFullSubPage("ambulance") },
+                                    index = 13
+                                )
+                                DashboardCircleItem(
+                                    label = if (isEnglish) "Notice Board" else "নোটিশ বোর্ড",
+                                    icon = Icons.Default.VolumeUp,
+                                    color = Color(0xFF9CA3AF),
+                                    click = { viewModel.setActiveFullSubPage("notice") },
+                                    index = 14
+                                )
                             }
                         }
                     }
@@ -573,11 +1023,11 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White)
+                                .background(CardBackgroundLight)
                                 .padding(horizontal = 12.dp)
                         ) {
                             Spacer(modifier = Modifier.height(28.dp))
-                            SectionHeader(title = "করিমগঞ্জ উপজেলা স্বাস্থ্য সেবা সমূহ")
+                            SectionHeader(title = if (isEnglish) "Karimganj Upazila Health Services" else "করিমগঞ্জ উপজেলা স্বাস্থ্য সেবা সমূহ")
                             Spacer(modifier = Modifier.height(14.dp))
 
                             Row(
@@ -586,18 +1036,18 @@ fun HomeScreen(
                             ) {
                                 Box(modifier = Modifier.weight(1f)) {
                                     WideActionCard(
-                                        title = "উপজেলা স্বাস্থ্য কমপ্লেক্স",
+                                        title = if (isEnglish) "Upazila Health Complex" else "উপজেলা স্বাস্থ্য কমপ্লেক্স",
                                         icon = Icons.Default.LocalHospital,
                                         iconColor = Color(0xFFE91E63),
-                                        onClick = { activeFullSubPage = "health_complex" }
+                                        onClick = { viewModel.setActiveFullSubPage("health_complex") }
                                     )
                                 }
                                 Box(modifier = Modifier.weight(1f)) {
                                     WideActionCard(
-                                        title = "ঔষধ ও ফার্মেসি",
+                                        title = if (isEnglish) "Medicine & Pharmacy" else "ঔষধ ও ফার্মেসি",
                                         icon = Icons.Default.MedicalServices,
                                         iconColor = Color(0xFF00BCD4),
-                                        onClick = { activeFullSubPage = "pharmacy" }
+                                        onClick = { viewModel.setActiveFullSubPage("pharmacy") }
                                     )
                                 }
                             }
@@ -609,11 +1059,11 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color.White)
+                                .background(CardBackgroundLight)
                                 .padding(horizontal = 12.dp)
                         ) {
                             Spacer(modifier = Modifier.height(28.dp))
-                            SectionHeader(title = "করিমগঞ্জের দর্শনীয় স্থানসমূহ")
+                            SectionHeader(title = if (isEnglish) "Tourist Spots of Karimganj" else "করিমগঞ্জের দর্শনীয় স্থানসমূহ")
                             Spacer(modifier = Modifier.height(14.dp))
                         }
                     }
@@ -627,11 +1077,12 @@ fun HomeScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(Color.White)
+                                            .background(CardBackgroundLight)
                                             .padding(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
                                         CivicItemCard(
                                             item = spot,
+                                            isEnglish = isEnglish,
                                             onItemClick = { onNavigateToDetail(spot.id) }
                                         )
                                     }
@@ -647,7 +1098,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(30.dp)
-                                .background(Color.White)
+                                .background(CardBackgroundLight)
                         )
                     }
                 }
@@ -717,8 +1168,8 @@ fun DashboardCircleItem(
             .clickable(onClick = click)
             .padding(3.dp),
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        border = BorderStroke(1.dp, Color(0xFFF0F0F0)),
+        colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+        border = BorderStroke(1.dp, CardBorderColor),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -801,7 +1252,7 @@ fun WideActionCard(
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(CircleShape)
-                        .background(Color.White),
+                        .background(CardBackgroundLight),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -864,19 +1315,45 @@ fun MockOverlayDialog(
 // -------------------------------------------------------------
 // ABOUT UPAZILA SCREEN
 // -------------------------------------------------------------
+// -------------------------------------------------------------
+// ABOUT UPAZILA SCREEN
+// -------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(viewModel: MainViewModel) {
     val context = LocalContext.current
-    val infoState by viewModel.upazilaInfo.collectAsStateWithLifecycle()
+    val isEnglish by viewModel.isEnglish.collectAsStateWithLifecycle()
+
+    // Expandable states for each section - initialized to true (expanded) by default
+    var expandedLocation by remember { mutableStateOf(true) }
+    var expandedHistory by remember { mutableStateOf(true) }
+    var expandedEducation by remember { mutableStateOf(true) }
+    var expandedEconomy by remember { mutableStateOf(true) }
+    var expandedPersonalities by remember { mutableStateOf(true) }
 
     Scaffold(
-        containerColor = MinimalBackground,
+        containerColor = MinimalBackground, // Dynamic background
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.about_headline), color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
-            )
+            Column {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = if (isEnglish) "About Karimganj" else "করিমগঞ্জ পরিচিতি",
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF1B5E20)) // Dark Green Top Bar
+                )
+                // Red Accent line under top bar representing Red & Green combination
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(KarimganjCrimson)
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -886,197 +1363,453 @@ fun AboutScreen(viewModel: MainViewModel) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            when (val state = infoState) {
-                is UiState.Loading -> {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = KarimganjGreen)
-                        }
-                    }
-                }
-                is UiState.Error -> {
-                    item {
-                        ErrorStateView(message = state.message, onRetry = { viewModel.refresh() })
-                    }
-                }
-                is UiState.Success -> {
-                    val info = state.data ?: return@LazyColumn
-                    
-                    item {
-                        // Hero Image of Kishoreganj / Haor
-                        SubcomposeAsyncImage(
-                            model = info.image_url,
-                            contentDescription = info.title,
+            // Card 1: Karimganj Upazila Intro Card
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF4ED)), // Soft light green-gray tint
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        // Info Icon circle
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(220.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .border(1.dp, Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
-                            contentScale = ContentScale.Crop,
-                            loading = {
-                                Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
-                                    CircularProgressIndicator(color = KarimganjGreen)
-                                }
-                            },
-                            error = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(KarimganjGreen),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Landscape, contentDescription = null, tint = Color.White.copy(0.6f), modifier = Modifier.size(64.dp))
-                                }
-                            }
-                        )
-                    }
-
-                    item {
-                        Text(
-                            text = info.title,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = KarimganjGreen
-                        )
-                    }
-
-                    // Key details dashboard grid
-                    item {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                .size(50.dp)
+                                .background(Color(0xFF2E7D32), shape = CircleShape), // Dark green circle background
+                            contentAlignment = Alignment.Center
                         ) {
-                            // Area Board
-                            Card(
-                                modifier = Modifier.weight(1.0f),
-                                colors = CardDefaults.cardColors(containerColor = KarimganjLightGreen),
-                                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color(0xFFEDF4ED), shape = CircleShape),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.SquareFoot, contentDescription = null, tint = KarimganjGreen)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(stringResource(R.string.lbl_area), fontSize = 12.sp, color = Color(0xFF00201C))
-                                    Text(info.area, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00201C))
-                                }
-                            }
-                            // Population Board
-                            Card(
-                                modifier = Modifier.weight(1.0f),
-                                colors = CardDefaults.cardColors(containerColor = KarimganjLightGreen),
-                                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.Groups, contentDescription = null, tint = KarimganjGreen)
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(stringResource(R.string.lbl_population), fontSize = 12.sp, color = Color(0xFF00201C))
-                                    Text(info.population, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF00201C))
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = Color(0xFF1B5E20), // Dark green icon
+                                    modifier = Modifier.size(28.dp)
+                                )
                             }
                         }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (isEnglish) "Karimganj Upazila Overview" else "করিমগঞ্জ উপজেলা পরিচিতি",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1B5E20)
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = if (isEnglish) "A traditional administrative region of Kishoreganj district" else "কিশোরগঞ্জ জেলার ঐতিহ্যবাহী একটি প্রশাসনিক অঞ্চল",
+                            fontSize = 14.sp,
+                            color = Color(0xFF616161),
+                            textAlign = TextAlign.Center
+                        )
                     }
+                }
+            }
 
-                    // Deep Description Body
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+            // Card 2: Statistics & Graph
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, CardBorderColor),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Text(
+                            text = if (isEnglish) "Statistics & Graphs" else "পরিসংখ্যান ও গ্রাফ",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1B5E20)
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text(
+                            text = if (isEnglish) "Literacy Rate Comparison (Top 5 Selected Unions)" else "সাক্ষরতার হার তুলনা (ইউনিয়ন ভিত্তিক শীর্ষ ৫ চয়ন)",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Literacy Rate bars (Green)
+                        val literacyData = listOf(
+                            Triple(if (isEnglish) "Niamatpur" else "নিয়ামতপুর", 0.80f, "48.0%"),
+                            Triple(if (isEnglish) "Jafarabad" else "জাফরাবাদ", 0.77f, "46.5%"),
+                            Triple(if (isEnglish) "Gujadia" else "গুজাদিয়া", 0.75f, "45.2%"),
+                            Triple(if (isEnglish) "Dehunda" else "দেহুন্দা", 0.73f, "44.2%"),
+                            Triple(if (isEnglish) "Noabad" else "নোয়াবাদ", 0.72f, "43.8%")
+                        )
+
+                        literacyData.forEach { (label, progress, value) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
-                                    text = "ইতিহাস ও ভৌগলিক পরিচিতি",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = KarimganjGreen
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = info.description,
-                                    fontSize = 15.sp,
-                                    lineHeight = 24.sp,
+                                    text = label,
+                                    modifier = Modifier.width(90.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = Color.DarkGray
                                 )
-                            }
-                        }
-                    }
-
-                    // Maps Section
-                    item {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = stringResource(R.string.lbl_location),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = KarimganjGreen
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                
-                                // Beautiful Maps drawing placeholder as a vector board
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color(0xFFFFF9F6))
-                                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp))
-                                        .clickable {
-                                            // Launch external Google Maps navigation!
-                                            val gmmIntentUri = Uri.parse("geo:${info.location_lat},${info.location_lng}?q=${info.location_lat},${info.location_lng}(${info.title})")
-                                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
-                                                setPackage("com.google.android.apps.maps")
-                                            }
-                                            try {
-                                                context.startActivity(mapIntent)
-                                            } catch (e: Exception) {
-                                                // Default web map fallback
-                                                val webMapIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=${info.location_lat},${info.location_lng}"))
-                                                context.startActivity(webMapIntent)
-                                            }
-                                        },
-                                    contentAlignment = Alignment.Center
+                                        .weight(1f)
+                                        .height(10.dp)
+                                        .background(Color(0xFFF4F6F9), shape = RoundedCornerShape(5.dp))
                                 ) {
-                                    // Custom visual radar mapping
-                                    Canvas(modifier = Modifier.fillMaxSize()) {
-                                        // Draw Grid Lines representing map coordinates
-                                        val steps = 8
-                                        val stepX = size.width / steps
-                                        val stepY = size.height / steps
-                                        for (i in 1 until steps) {
-                                            drawLine(Color.LightGray.copy(alpha = 0.4f), start = androidx.compose.ui.geometry.Offset(i * stepX, 0f), end = androidx.compose.ui.geometry.Offset(i * stepX, size.height))
-                                            drawLine(Color.LightGray.copy(alpha = 0.4f), start = androidx.compose.ui.geometry.Offset(0f, i * stepY), end = androidx.compose.ui.geometry.Offset(size.width, i * stepY))
-                                        }
-                                        // Draw radar rings
-                                        drawCircle(KarimganjGreen.copy(0.08f), radius = size.minDimension / 4)
-                                        drawCircle(KarimganjGreen.copy(0.04f), radius = size.minDimension / 2)
-                                    }
-                                    
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Box(
-                                            modifier = Modifier
-                                                .background(KarimganjCrimson, CircleShape)
-                                                .padding(10.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Map,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(28.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(10.dp))
-                                        Text("গুগল ম্যাপে লাইভ অবস্থান দেখুন", fontWeight = FontWeight.Bold, color = KarimganjGreen, fontSize = 14.sp)
-                                        Text("স্থানাঙ্ক: ${info.location_lat}, ${info.location_lng}", color = Color.Gray, fontSize = 12.sp)
-                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(progress)
+                                            .background(Color(0xFF1B5E20), shape = RoundedCornerShape(5.dp)) // Dark Green Bar
+                                    )
                                 }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = value,
+                                    modifier = Modifier.width(45.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.DarkGray,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = if (isEnglish) "Population Comparison (Top 5 Unions)" else "জনসংখ্যা তুলনা (শীর্ষ ৫ ইউনিয়ন)",
+                            fontSize = 13.sp,
+                            color = Color.Gray,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Population bars (Blue)
+                        val populationData = listOf(
+                            Triple(if (isEnglish) "Gunadhar" else "গুনধর", 0.85f, "42k"),
+                            Triple(if (isEnglish) "Niamatpur" else "নিয়ামতপুর", 0.70f, "35k"),
+                            Triple(if (isEnglish) "Gujadia" else "গুজাদিয়া", 0.64f, "32k"),
+                            Triple(if (isEnglish) "Kadirjungle" else "কাদিরজঙ্গল", 0.56f, "28k"),
+                            Triple(if (isEnglish) "Jafarabad" else "জাফরাবাদ", 0.54f, "27k")
+                        )
+
+                        populationData.forEach { (label, progress, value) ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = label,
+                                    modifier = Modifier.width(90.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.DarkGray
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(10.dp)
+                                        .background(Color(0xFFF4F6F9), shape = RoundedCornerShape(5.dp))
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .fillMaxWidth(progress)
+                                            .background(Color(0xFF2196F3), shape = RoundedCornerShape(5.dp)) // Blue Bar
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = value,
+                                    modifier = Modifier.width(45.dp),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.DarkGray,
+                                    textAlign = TextAlign.End
+                                )
                             }
                         }
                     }
                 }
             }
+
+            // Card 3: অবস্থান ও আয়তন (Location & Area)
+            item {
+                ExpandableInfoCard(
+                    title = if (isEnglish) "Location & Area" else "অবস্থান ও আয়তন",
+                    subtitle = if (isEnglish) "Second largest among 13 Upazilas of Kishoreganj." else "কিশোরগঞ্জ জেলার ১৩টি উপজেলার মধ্যে দ্বিতীয় বৃহত্তম উপজেলা।",
+                    icon = Icons.Default.Map,
+                    expanded = expandedLocation,
+                    onExpandToggle = { expandedLocation = !expandedLocation }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        CheckmarkPoint(if (isEnglish) "North: Tarail Upazila" else "উত্তরে: তাড়াইল উপজেলা")
+                        CheckmarkPoint(if (isEnglish) "South: Nikli & Katiadi Upazila" else "দক্ষিণে: নিকলী ও কটিয়াদী উপজেলা")
+                        CheckmarkPoint(if (isEnglish) "East: Itna & Mithamain Upazila" else "পূর্বে: ইটনা ও মিঠামইন উপজেলা")
+                        CheckmarkPoint(if (isEnglish) "West: Kishoreganj Sadar Upazila" else "পশ্চিমে: কিশোরগঞ্জ সদর উপজেলা")
+                        CheckmarkPoint(if (isEnglish) "Total Area: 200.52 sq km (77.42 sq mi)" else "মোট আয়তন: ২০০.৫২ বর্গকিমি (৭৭.৪২ বর্গমাইল)")
+                    }
+                }
+            }
+
+            // Card 5: ইতিহাস ও ঐতিহ্য (History & Heritage)
+            item {
+                ExpandableInfoCard(
+                    title = if (isEnglish) "History & Heritage" else "ইতিহাস ও ঐতিহ্য",
+                    subtitle = if (isEnglish) "Historically, the name Jangalbari is very well known." else "ঐতিহাসিকভাবে করিমগঞ্জের জঙ্গলবাড়ি নামটি অত্যন্ত সুপরিচিত।",
+                    icon = Icons.Default.History,
+                    expanded = expandedHistory,
+                    onExpandToggle = { expandedHistory = !expandedHistory }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        CheckmarkPoint(if (isEnglish) "It was the second capital of Isha Khan, the leader of Bengal's Baro-Bhuyans." else "এটি বাংলার বারো ভূঁইয়ার প্রধান ঈশা খাঁর দ্বিতীয় রাজধানী ছিল।")
+                        CheckmarkPoint(if (isEnglish) "Palace, Shahi Mosque, and Isha Khan's Fort are located in Jangalbari as archaeological sites." else "জঙ্গলবাড়িতে প্রত্নতাত্ত্বিক নিদর্শন হিসেবে প্রাসাদ, শাহী মসজিদ ও ঈশা খাঁর দুর্গ অবস্থিত।")
+                        CheckmarkPoint(if (isEnglish) "Karimganj Thana was formed in 1909 and upgraded to an Upazila in 1983." else "১৯০৯ সালে করিমগঞ্জ থানা গঠিত হয় এবং ১৯৮৩ সালে উপজেলায় রূপান্তর করা হয়।")
+                    }
+                }
+            }
+
+            // Card 6: শিক্ষা প্রতিষ্ঠান (Educational Institutions)
+            item {
+                ExpandableInfoCard(
+                    title = if (isEnglish) "Educational Institutions" else "শিক্ষা প্রতিষ্ঠান",
+                    subtitle = if (isEnglish) "There are several ancient and well-known institutions." else "উপজেলায় বেশ কিছু প্রাচীন ও সুপরিচিত শিক্ষা প্রতিষ্ঠান রয়েছে।",
+                    icon = Icons.Default.School,
+                    expanded = expandedEducation,
+                    onExpandToggle = { expandedEducation = !expandedEducation }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        SubSectionHeader(if (isEnglish) "Institute" else "ইনস্টিটিউট")
+                        BulletPointItem(if (isEnglish) "Kishoreganj Polytechnic Institute" else "কিশোরগঞ্জ পলিটেকনিক ইনস্টিটিউট")
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SubSectionHeader(if (isEnglish) "Colleges" else "কলেজ")
+                        val colleges = listOf(
+                            if (isEnglish) "Karimganj Government College" else "করিমগঞ্জ সরকারি মহাবিদ্যালয়",
+                            if (isEnglish) "Niamatpur School & College" else "নিয়ামতপুর স্কুল এন্ড কলেজ",
+                            if (isEnglish) "Haji Abdul Bari Master College" else "হাজী আব্দুলবারী মাস্টার মহাবিদ্যালয়",
+                            if (isEnglish) "Pouro Model College" else "পৌর মডেল কলেজ"
+                        )
+                        colleges.forEach { BulletPointItem(it) }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SubSectionHeader(if (isEnglish) "Secondary Schools" else "মাধ্যমিক বিদ্যালয়")
+                        val schools = listOf(
+                            if (isEnglish) "Kandail High School (1970)" else "কান্দাইল উচ্চ বিদ্যালয় (১৯৭০)",
+                            if (isEnglish) "Nanshree High School (1943)" else "নানশ্রী উচ্চ বিদ্যালয় (১৯৪৩)",
+                            if (isEnglish) "Dehunda High School (1970)" else "দেহুন্দা উচ্চ বিদ্যালয় (১৯৭০)",
+                            if (isEnglish) "Gujadia Abdul Hakim Secondary School (1950)" else "গুজাদিয়া আব্দুল হাকিম মাধ্যমিক বিদ্যালয় (১৯৫০)",
+                            if (isEnglish) "Karimganj Boys & Girls School (1952)" else "করিমগঞ্জ বয়েজ এন্ড গার্লস স্কুল (১৯৫২)",
+                            if (isEnglish) "Bhatia High School (1993)" else "ভাটিয়া উচ্চ বিদ্যালয় (১৯৯৩)"
+                        )
+                        schools.forEach { BulletPointItem(it) }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SubSectionHeader(if (isEnglish) "Madrasas" else "মাদ্রাসা")
+                        val madrasas = listOf(
+                            if (isEnglish) "Urdighi Dakhil Madrasah" else "উরদিঘী দাখিল মাদ্রাসা",
+                            if (isEnglish) "Kiraton Islamic Fazil Madrasah" else "কিরাটন ইসলামি ফাজিল মাদ্রাসা",
+                            if (isEnglish) "Karimganj Sobhania Fazil Madrasah" else "করিমগঞ্জ সোবহানিয়া ফাজিল মাদ্রাসা"
+                        )
+                        madrasas.forEach { BulletPointItem(it) }
+                    }
+                }
+            }
+
+            // Card 7: অর্থনীতি (Economy)
+            item {
+                ExpandableInfoCard(
+                    title = if (isEnglish) "Economy" else "অর্থনীতি",
+                    subtitle = if (isEnglish) "Karimganj's primary economy relies on agriculture and fisheries." else "করিমগঞ্জের প্রধান অর্থনীতি কৃষি ও মৎস্য নির্ভর।",
+                    icon = Icons.Default.TrendingUp,
+                    expanded = expandedEconomy,
+                    onExpandToggle = { expandedEconomy = !expandedEconomy }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        CheckmarkPoint(if (isEnglish) "Major crops: Rice, jute, tomato, green chili, potato, brinjal, and banana." else "প্রধান ফসল: ধান, পাট, টমেটো, কাঁচা মরিচ, আলু, বেগুন ও কলা।")
+                        CheckmarkPoint(if (isEnglish) "Fisheries: This region is highly developed in fish resources due to fertile haor and wetlands." else "মৎস্য চাষ: হাওর ও জলাভূমি সমৃদ্ধ হওয়ায় মৎস্য সম্পদে এই অঞ্চল অত্যন্ত উন্নত।")
+                    }
+                }
+            }
+
+            // Card 8: উল্লেখযোগ্য ব্যক্তিত্ব (Notable Personalities)
+            item {
+                ExpandableInfoCard(
+                    title = if (isEnglish) "Notable Personalities" else "উল্লেখযোগ্য ব্যক্তিত্ব",
+                    subtitle = if (isEnglish) "Illustrious sons and daughters of this region who contributed in various fields." else "এই জনপদের কৃতী সন্তান যারা বিভিন্ন ক্ষেত্রে অবদান রেখেছেন।",
+                    icon = Icons.Default.Star,
+                    expanded = expandedPersonalities,
+                    onExpandToggle = { expandedPersonalities = !expandedPersonalities }
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        CheckmarkPoint(if (isEnglish) "Colonel ATM Haidar - Bir Uttam decorated freedom fighter." else "কর্নেল এটিএম হায়দার - বীর উত্তম খেতাবপ্রাপ্ত মুক্তিযোদ্ধা।")
+                        CheckmarkPoint(if (isEnglish) "Captain Sitara Begum - Bir Protik decorated female freedom fighter." else "ক্যাপ্টেন সিতারা বেগম - বীর প্রতীক খেতাবপ্রাপ্ত নারী মুক্তিযোদ্ধা।")
+                        CheckmarkPoint(if (isEnglish) "Ilias Kanchan - Actor and founder of the 'We Demand Safe Roads' movement." else "ইলিয়াস কাঞ্চন - অভিনেতা ও 'নিরাপদ সড়ক চাই' আন্দোলনের প্রতিষ্ঠাতা।")
+                        CheckmarkPoint(if (isEnglish) "Shirin Sharmin Chaudhury - First female Speaker of the National Parliament of Bangladesh." else "শিরীন শারমিন চৌধুরী - বাংলাদেশের জাতীয় সংসদের প্রথম মহিলা স্পীকার।")
+                        CheckmarkPoint(if (isEnglish) "Osman Gani - Renowned academic and scientist." else "ওসমান গণি - প্রখ্যাত শিক্ষাবিদ ও বিজ্ঞানী।")
+                        CheckmarkPoint(if (isEnglish) "Osman Farruk - Politician and former minister." else "ওসমান ফারুক - রাজনীতিবিদ ও সাবেক মন্ত্রী।")
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun ExpandableInfoCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    expanded: Boolean,
+    onExpandToggle: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, CardBorderColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandToggle() }
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Circular icon background
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color(0xFFE8F5E9), shape = CircleShape), // Soft light green circle
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32), // Solid Green
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2E7D32)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) "সংকুচিত করুন" else "প্রসারিত করুন",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            if (expanded) {
+                Box(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        content()
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CheckmarkPoint(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = Color(0xFF2E7D32),
+            modifier = Modifier
+                .size(18.dp)
+                .padding(top = 2.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = Color(0xFF333333),
+            lineHeight = 20.sp
+        )
+    }
+}
+
+@Composable
+fun SubSectionHeader(title: String) {
+    Text(
+        text = title,
+        fontSize = 15.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF2E7D32),
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+fun BulletPointItem(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp, horizontal = 8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = "•",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.DarkGray,
+            modifier = Modifier.padding(end = 8.dp)
+        )
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = Color(0xFF444444),
+            lineHeight = 18.sp
+        )
     }
 }
 
@@ -1162,7 +1895,7 @@ fun EmergencyScreen(viewModel: MainViewModel) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .testTag("emergency_card_${emg.id}"),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
                                     border = BorderStroke(1.5.dp, KarimganjCrimson.copy(0.15f)),
                                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                                 ) {
@@ -1240,6 +1973,7 @@ fun DetailScreen(
 ) {
     val context = LocalContext.current
     val filteredItemsState by viewModel.filteredItems.collectAsStateWithLifecycle()
+    val isEnglish by viewModel.isEnglish.collectAsStateWithLifecycle()
     
     // Search the correct item in memory
     var matchedItem by remember(itemId, filteredItemsState) {
@@ -1257,10 +1991,10 @@ fun DetailScreen(
         containerColor = MinimalBackground,
         topBar = {
             TopAppBar(
-                title = { Text("বিস্তারিত বিবরণ", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "Detail Information" else "বিস্তারিত বিবরণ", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack, modifier = Modifier.testTag("btn_back")) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "ফিরে যান", tint = Color.White)
+                        Icon(Icons.Default.ArrowBack, contentDescription = if (isEnglish) "Go back" else "ফিরে যান", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
@@ -1278,7 +2012,7 @@ fun DetailScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = KarimganjGreen)
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text("তথ্য খোঁজা হচ্ছে...", color = Color.Gray)
+                    Text(if (isEnglish) "Searching information..." else "তথ্য খোঁজা হচ্ছে...", color = Color.Gray)
                 }
             }
         } else {
@@ -1291,31 +2025,68 @@ fun DetailScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Large item visual thumbnail
-                SubcomposeAsyncImage(
-                    model = item.imageUrl ?: "",
-                    contentDescription = item.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(240.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
-                    contentScale = ContentScale.Crop,
-                    loading = {
-                        Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = KarimganjGreen)
-                        }
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(KarimganjGreen),
-                            contentAlignment = Alignment.Center
+                if (item is TourismPlace) {
+                    // Beautiful custom banner for TourismPlace, replacing dummy photos
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(KarimganjGreen, Color(0xFF0F766E))
+                                )
+                            )
+                            .border(1.2.dp, KarimganjYellow.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(Icons.Default.CorporateFare, contentDescription = null, tint = Color.White.copy(0.6f), modifier = Modifier.size(72.dp))
+                            Icon(
+                                imageVector = Icons.Default.Explore,
+                                contentDescription = null,
+                                tint = KarimganjYellow,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = if (isEnglish) "OFFICIAL TRAVEL GUIDE" else "সরকারি তথ্যকোষ ও ভ্রমণ নির্দেশিকা",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
                         }
                     }
-                )
+                } else {
+                    SubcomposeAsyncImage(
+                        model = item.imageUrl ?: "",
+                        contentDescription = item.name,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(1.dp, Color.LightGray.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop,
+                        loading = {
+                            Box(modifier = Modifier.fillMaxSize().background(Color.LightGray), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = KarimganjGreen)
+                            }
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(KarimganjGreen),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.CorporateFare, contentDescription = null, tint = Color.White.copy(0.6f), modifier = Modifier.size(72.dp))
+                            }
+                        }
+                    )
+                }
 
                 // Category Tag
                 Box(
@@ -1340,21 +2111,121 @@ fun DetailScreen(
                         InfoRow(label = stringResource(R.string.lbl_designation), value = item.designation, icon = Icons.Default.Work)
                     }
                     is EducationInstitute -> {
-                        InfoRow(label = "প্রতিষ্ঠানের ধরন", value = item.type, icon = Icons.Default.School)
+                        InfoRow(label = if (isEnglish) "Institution Type" else "প্রতিষ্ঠানের ধরন", value = item.type, icon = Icons.Default.School)
                     }
                     is HealthCenter -> {
                         InfoRow(label = stringResource(R.string.lbl_doctor), value = item.doctorName, icon = Icons.Default.MedicalServices)
                     }
                     is TourismPlace -> {
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = KarimganjLightGreen),
-                            modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Text("দর্শনীয় স্থান পরিচিতি", fontWeight = FontWeight.Bold, color = Color(0xFF00201C), fontSize = 15.sp)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(item.description, color = Color(0xFF00201C).copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 22.sp)
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = KarimganjLightGreen),
+                                modifier = Modifier.fillMaxWidth(),
+                                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f))
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Text(if (isEnglish) "Tourism Place Introduction" else "দর্শনীয় স্থান পরিচিতি", fontWeight = FontWeight.Bold, color = Color(0xFF00201C), fontSize = 15.sp)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(item.description, color = Color(0xFF00201C).copy(alpha = 0.85f), fontSize = 14.sp, lineHeight = 22.sp)
+                                }
+                            }
+
+                            // Google Maps Navigation Card
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)), // Warm yellow/amber container
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.2.dp, KarimganjYellow.copy(alpha = 0.4f))
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(44.dp)
+                                                .background(KarimganjYellow.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Map,
+                                                contentDescription = null,
+                                                tint = KarimganjYellow,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column {
+                                            Text(
+                                                text = if (isEnglish) "Google Maps Location" else "গুগল ম্যাপে লোকেশন",
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF92400E), // dark amber
+                                                fontSize = 14.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = if (isEnglish) "Get precise directions on map" else "সহজেই ম্যাপের সাহায্যে পৌঁছান",
+                                                color = Color(0xFF78350F),
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                    
+                                    Button(
+                                        onClick = {
+                                            val query = if (item.id == "tour_1") {
+                                                "Balikhola Ghat, Karimganj, Kishoreganj"
+                                            } else if (item.id == "tour_2") {
+                                                "Jangalbari Fort, Karimganj, Kishoreganj"
+                                            } else {
+                                                "${item.name}, ${item.address}"
+                                            }
+                                            val gmmIntentUri = Uri.parse("geo:0,0?q=" + Uri.encode(query))
+                                            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri).apply {
+                                                setPackage("com.google.android.apps.maps")
+                                            }
+                                            try {
+                                                context.startActivity(mapIntent)
+                                            } catch (e: Exception) {
+                                                // Fallback to web browser Google Maps
+                                                val webIntent = Intent(
+                                                    Intent.ACTION_VIEW,
+                                                    Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(query))
+                                                )
+                                                context.startActivity(webIntent)
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = KarimganjYellow),
+                                        shape = RoundedCornerShape(10.dp),
+                                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                        modifier = Modifier.testTag("btn_view_map_${item.id}")
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = if (isEnglish) "Go" else "ম্যাপ দেখুন",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(
+                                                imageVector = Icons.Default.Directions,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -1378,7 +2249,7 @@ fun DetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1.0f)) {
-                                Text("যোগাযোগের নম্বর", color = Color.Gray, fontSize = 12.sp)
+                                Text(if (isEnglish) "Contact Number" else "যোগাযোগের নম্বর", color = Color.Gray, fontSize = 12.sp)
                                 Text(tel, fontWeight = FontWeight.Bold, color = KarimganjGreen, fontSize = 18.sp)
                             }
                             Button(
@@ -1697,144 +2568,632 @@ fun UpazilaHeroBanner(info: UpazilaInfo) {
 }
 
 @Composable
-fun CivicItemCard(
-    item: SearchableItem,
+fun AdministrationItemCard(
+    item: GovernmentOffice,
+    isEnglish: Boolean,
     onItemClick: () -> Unit
 ) {
+    val context = LocalContext.current
+    
+    // Check if the item is a core officer or general staff
+    val isStaff = item.id.startsWith("office_staff_")
+    
+    // Extract email from address if present
+    val email = if (item.address.contains("@")) {
+        item.address.substringBefore("|").trim()
+    } else null
+    
+    val cleanAddress = if (item.address.contains("@")) {
+        item.address.substringAfter("|").trim()
+    } else {
+        item.address
+    }
+    
+    // Choose beautiful gradient & icon based on designation
+    val (gradientColors, icon) = when {
+        item.designation.contains("নির্বাহী") -> listOf(Color(0xFFB71C1C), Color(0xFFE53935)) to Icons.Default.AccountBalance
+        item.designation.contains("কমিশনার") -> listOf(Color(0xFF1565C0), Color(0xFF1E88E5)) to Icons.Default.LocationOn
+        item.designation.contains("চার্জ") || item.designation.contains("OC") -> listOf(Color(0xFF37474F), Color(0xFF546E7A)) to Icons.Default.Lock
+        item.designation.contains("কৃষি") -> listOf(Color(0xFF2E7D32), Color(0xFF43A047)) to Icons.Default.Build
+        item.designation.contains("সাঁট মুদ্রাক্ষরিক") -> listOf(Color(0xFF00695C), Color(0xFF00897B)) to Icons.Default.Keyboard
+        item.designation.contains("চালক") -> listOf(Color(0xFFD84315), Color(0xFFF4511E)) to Icons.Default.PlayArrow
+        item.designation.contains("সহায়ক") -> listOf(Color(0xFF6A1B9A), Color(0xFF8E24AA)) to Icons.Default.Person
+        item.designation.contains("মালী") -> listOf(Color(0xFF2E7D32), Color(0xFF4CAF50)) to Icons.Default.Favorite
+        item.designation.contains("পরিচ্ছন্নতা") -> listOf(Color(0xFF795548), Color(0xFF8D6E63)) to Icons.Default.Refresh
+        else -> listOf(Color(0xFF37474F), Color(0xFF455A64)) to Icons.Default.Person
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onItemClick)
-            .testTag("civic_card_${item.id}"),
-        shape = RoundedCornerShape(20.dp),
+            .testTag("admin_card_${item.id}"),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
-        border = BorderStroke(1.dp, CardBorderColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(1.dp, CardBorderColor)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SubcomposeAsyncImage(
-                model = item.imageUrl ?: "",
-                contentDescription = item.name,
-                modifier = Modifier
-                    .size(84.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp)),
-                contentScale = ContentScale.Crop,
-                loading = {
-                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F6F8)), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = KarimganjGreen, modifier = Modifier.size(20.dp))
-                    }
-                },
-                error = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(KarimganjLightGreen),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val icon = when (item) {
-                            is GovernmentOffice -> Icons.Default.WorkOutline
-                            is EducationInstitute -> Icons.Default.School
-                            is HealthCenter -> Icons.Default.LocalHospital
-                            is TourismPlace -> Icons.Default.PhotoCamera
-                        }
-                        Icon(icon, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(30.dp))
-                    }
+                .drawBehind {
+                    // Left-side modern vertical authority indicator capsule bar
+                    val barWidth = 4.dp.toPx()
+                    val barHeight = size.height - 32.dp.toPx()
+                    drawRoundRect(
+                        brush = Brush.verticalGradient(gradientColors),
+                        topLeft = Offset(0f, 16.dp.toPx()),
+                        size = androidx.compose.ui.geometry.Size(barWidth, barHeight),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                    )
                 }
-            )
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1.0f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .clickable { onItemClick() }
+                .padding(start = 18.dp, end = 16.dp, top = 16.dp, bottom = 14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Beautiful multi-layered outer avatar box
+                Box(
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    gradientColors[0].copy(alpha = 0.12f),
+                                    gradientColors[1].copy(alpha = 0.04f)
+                                )
+                            )
+                        )
+                        .border(1.dp, gradientColors[0].copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+                        .padding(5.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .background(KarimganjGreen.copy(0.12f), RoundedCornerShape(6.dp))
-                            .border(0.5.dp, KarimganjGreen.copy(0.3f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(Brush.verticalGradient(gradientColors)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(item.typeLabel, fontSize = 9.sp, color = KarimganjGreen, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp)
-                    }
-                    if (item is GovernmentOffice) {
-                        Text(
-                            text = item.designation,
-                            fontSize = 11.sp,
-                            color = MinimalMutedText,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
                         )
-                    } else if (item is HealthCenter) {
-                        Text(
-                            text = "চিকিৎসক সেবা",
-                            fontSize = 11.sp,
-                            color = MinimalMutedText,
-                            fontWeight = FontWeight.Medium
-                        )
-                    } else if (item is TourismPlace) {
-                        Box(
-                            modifier = Modifier
-                                .background(KarimganjYellow.copy(0.12f), RoundedCornerShape(6.dp))
-                                .border(0.5.dp, KarimganjYellow.copy(0.3f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text("দর্শনীয় স্থান", fontSize = 9.sp, color = KarimganjYellow, fontWeight = FontWeight.ExtraBold)
-                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                Text(
-                    text = item.name,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MinimalText,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    letterSpacing = (-0.1).sp
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Badge: Officer vs Staff
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    if (isStaff) Color(0xFFE0F2F1) else Color(0xFFFFEBEE),
+                                    RoundedCornerShape(100.dp)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isStaff) Color(0xFFB2DFDB) else Color(0xFFFFCDD2),
+                                    shape = RoundedCornerShape(100.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 3.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isStaff) Icons.Default.Work else Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = if (isStaff) Color(0xFF00796B) else Color(0xFFD32F2F),
+                                    modifier = Modifier.size(10.dp)
+                                )
+                                Text(
+                                    text = if (isStaff) {
+                                        if (isEnglish) "Parishad Staff" else "উপজেলা কর্মচারী"
+                                    } else {
+                                        if (isEnglish) "Govt. Officer" else "সরকারি কর্মকর্তা"
+                                    },
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isStaff) Color(0xFF004D40) else Color(0xFF880E4F),
+                                    letterSpacing = 0.1.sp
+                                )
+                            }
+                        }
+                    }
 
-                Spacer(modifier = Modifier.height(3.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Office/Staff Name
+                    Text(
+                        text = item.name,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 21.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Designation Subtitle
+                    Text(
+                        text = item.designation,
+                        fontSize = 12.sp,
+                        color = Color(0xFF475569),
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 16.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+            Divider(color = Color(0xFFF1F5F9), thickness = 1.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Contact details in beautiful background pills
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Address Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
-                        tint = MinimalMutedText,
-                        modifier = Modifier.size(12.dp)
+                        tint = Color(0xFF64748B),
+                        modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = item.address,
-                        fontSize = 11.sp,
-                        color = MinimalMutedText,
+                        text = cleanAddress,
+                        fontSize = 11.5.sp,
+                        color = Color(0xFF475569),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                val phone = item.phone
-                if (!phone.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                // Email Row (if present)
+                if (email != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(KarimganjGreen.copy(0.08f))
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                            .fillMaxWidth()
+                            .background(Color(0xFFF0F9FF), RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFFE0F2FE), RoundedCornerShape(8.dp))
+                            .clickable {
+                                try {
+                                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                        data = Uri.parse("mailto:$email")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    // Ignore
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Icon(Icons.Default.Phone, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(11.dp))
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = null,
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = email,
+                            fontSize = 11.5.sp,
+                            color = Color(0xFF0369A1),
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Action Buttons!
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // 1. Direct Call Action Button
+                Button(
+                    onClick = {
+                        try {
+                            val intent = Intent(Intent.ACTION_DIAL).apply {
+                                data = Uri.parse("tel:${item.phone}")
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // fallback
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Phone,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isEnglish) "Call Directly" else "সরাসরি কল",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                // 2. Details or Copy Info Action Button
+                OutlinedButton(
+                    onClick = {
+                        onItemClick()
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(42.dp),
+                    border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF334155)),
+                    contentPadding = PaddingValues(horizontal = 12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFF334155),
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = if (isEnglish) "More Info" else "বিস্তারিত তথ্য",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF334155)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CivicItemCard(
+    item: SearchableItem,
+    isEnglish: Boolean = false,
+    onItemClick: () -> Unit
+) {
+    if (item is TourismPlace) {
+        // Special, elegant Tourism Card without dummy photos and beautifully structured travel details
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onItemClick)
+                .testTag("tourism_card_${item.id}"),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFDFBF7)), // Warm organic linen color
+            border = BorderStroke(1.2.dp, KarimganjYellow.copy(alpha = 0.35f)), // Custom warm yellow border
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Stylized travel icon/badge (no dummy images!)
+                    Box(
+                        modifier = Modifier
+                            .size(68.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0xFFFFFBEB), Color(0xFFFEF3C7))
+                                )
+                            )
+                            .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(14.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Explore,
+                            contentDescription = null,
+                            tint = KarimganjYellow,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .background(KarimganjYellow.copy(0.12f), RoundedCornerShape(6.dp))
+                                    .border(0.5.dp, KarimganjYellow.copy(0.4f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "Tourism" else "পর্যটন আকর্ষণ",
+                                    fontSize = 9.sp,
+                                    color = Color(0xFFB45309), // Dark amber
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.3.sp
+                                )
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .background(KarimganjGreen.copy(0.08f), RoundedCornerShape(6.dp))
+                                    .border(0.5.dp, KarimganjGreen.copy(0.25f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = if (isEnglish) "Travel Guide" else "ভ্রমণ গাইড",
+                                    fontSize = 9.sp,
+                                    color = KarimganjGreen,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.3.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = item.name,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MinimalText,
+                            lineHeight = 22.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = KarimganjGreen,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = item.address,
+                                fontSize = 11.sp,
+                                color = MinimalMutedText,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Beautifully designed data segment / description of the tourist spot
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF9F6F0)),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(0.5.dp, Color(0xFFE5E7EB))
+                ) {
+                    Text(
+                        text = item.description,
+                        fontSize = 12.sp,
+                        color = Color(0xFF374151),
+                        lineHeight = 18.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Elegant action button at the bottom of the card for high visual appeal and accessibility
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Button(
+                        onClick = onItemClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isEnglish) "Explore Spot Details" else "দর্শনীয় স্থান বিস্তারিত দেখুন",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowForward,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Generic CivicItemCard for other categories
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onItemClick)
+                .testTag("civic_card_${item.id}"),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+            border = BorderStroke(1.dp, CardBorderColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SubcomposeAsyncImage(
+                    model = item.imageUrl ?: "",
+                    contentDescription = item.name,
+                    modifier = Modifier
+                        .size(84.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp)),
+                    contentScale = ContentScale.Crop,
+                    loading = {
+                        Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF5F6F8)), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = KarimganjGreen, modifier = Modifier.size(20.dp))
+                        }
+                    },
+                    error = {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(KarimganjLightGreen),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val icon = when (item) {
+                                is GovernmentOffice -> Icons.Default.WorkOutline
+                                is EducationInstitute -> Icons.Default.School
+                                is HealthCenter -> Icons.Default.LocalHospital
+                                is TourismPlace -> Icons.Default.PhotoCamera
+                            }
+                            Icon(icon, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(30.dp))
+                        }
+                    }
+                )
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1.0f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(KarimganjGreen.copy(0.12f), RoundedCornerShape(6.dp))
+                                .border(0.5.dp, KarimganjGreen.copy(0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(item.typeLabel, fontSize = 9.sp, color = KarimganjGreen, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.3.sp)
+                        }
+                        if (item is GovernmentOffice) {
+                            Text(
+                                text = item.designation,
+                                fontSize = 11.sp,
+                                color = MinimalMutedText,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (item is HealthCenter) {
+                            Text(
+                                text = "চিকিৎসক সেবা",
+                                fontSize = 11.sp,
+                                color = MinimalMutedText,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = item.name,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MinimalText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        letterSpacing = (-0.1).sp
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = MinimalMutedText,
+                            modifier = Modifier.size(12.dp)
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(phone, fontSize = 11.sp, color = KarimganjGreen, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = item.address,
+                            fontSize = 11.sp,
+                            color = MinimalMutedText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    val phone = item.phone
+                    if (!phone.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(KarimganjGreen.copy(0.08f))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Icon(Icons.Default.Phone, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(11.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(phone, fontSize = 11.sp, color = KarimganjGreen, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -1909,24 +3268,35 @@ fun EmptyStateView(query: String) {
 // -------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OnlineServicesScreen() {
+fun OnlineServicesScreen(isEnglish: Boolean) {
     val context = LocalContext.current
     var shownLinkDialog by remember { mutableStateOf<String?>(null) }
 
-    val onlineServices = listOf(
-        Pair("অনলাইন জন্ম ও মৃত্যু নিবন্ধন সংশোধন", "https://bdris.gov.bd"),
-        Pair("ই-পর্চা খতিয়ান ও আরএস রেকর্ড অনুসন্ধান", "https://eporcha.gov.bd"),
-        Pair("স্মার্ট জাতীয় পরিচয়পত্র সংশোধন ও ডাউনলোড", "https://services.nidw.gov.bd"),
-        Pair("নতুন হোল্ডিং নম্বর ট্র্যাকিং ও কর পরিশোধ", "https://mutation.land.gov.bd"),
-        Pair("অনলাইন ই-নামজারি নামপত্তন আবেদন", "https://land.gov.bd"),
-        Pair("পল্লীবিদ্যুৎ বিল ও বিদ্যুৎ লাইভ কমপ্লেন", "https://reb.gov.bd")
-    )
+    val onlineServices = if (isEnglish) {
+        listOf(
+            Pair("Online Birth & Death Registration Correction", "https://bdris.gov.bd"),
+            Pair("E-Porcha Khatian & RS Record Search", "https://eporcha.gov.bd"),
+            Pair("Smart NID Card Correction & Download", "https://services.nidw.gov.bd"),
+            Pair("New Holding Number Tracking & Tax Payment", "https://mutation.land.gov.bd"),
+            Pair("Online E-Namjari Mutation Application", "https://land.gov.bd"),
+            Pair("Palli Bidyut Bill & Live Electricity Complaint", "https://reb.gov.bd")
+        )
+    } else {
+        listOf(
+            Pair("অনলাইন জন্ম ও মৃত্যু নিবন্ধন সংশোধন", "https://bdris.gov.bd"),
+            Pair("ই-পর্চা খতিয়ান ও আরএস রেকর্ড অনুসন্ধান", "https://eporcha.gov.bd"),
+            Pair("স্মার্ট জাতীয় পরিচয়পত্র সংশোধন ও ডাউনলোড", "https://services.nidw.gov.bd"),
+            Pair("নতুন হোল্ডিং নম্বর ট্র্যাকিং ও কর পরিশোধ", "https://mutation.land.gov.bd"),
+            Pair("অনলাইন ই-নামজারি নামপত্তন আবেদন", "https://land.gov.bd"),
+            Pair("পল্লীবিদ্যুৎ বিল ও বিদ্যুৎ লাইভ কমপ্লেন", "https://reb.gov.bd")
+        )
+    }
 
     Scaffold(
         containerColor = MinimalBackground,
         topBar = {
             TopAppBar(
-                title = { Text("অনলাইন ডিজিটাল সেবা", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "Online Digital Services" else "অনলাইন ডিজিটাল সেবা", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
             )
         }
@@ -1951,15 +3321,15 @@ fun OnlineServicesScreen() {
                         Icon(Icons.Default.Language, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(36.dp))
                         Spacer(modifier = Modifier.width(14.dp))
                         Column {
-                            Text("স্মার্ট বাংলাদেশ ডিজিটাল পোর্টাল", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                            Text("সরকারি এবং স্বায়ত্তশাসিত প্রায় সকল সেবা নাগরিক এখন একটি ক্লিকে ঘরে বসেই উপভোগ করতে পারবেন।", color = Color.LightGray, fontSize = 12.sp, lineHeight = 18.sp)
+                            Text(if (isEnglish) "Smart Bangladesh Digital Portal" else "স্মার্ট বাংলাদেশ ডিজিটাল পোর্টাল", color = KarimganjGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text(if (isEnglish) "Citizens can now enjoy almost all government and autonomous services at their doorstep with a single click." else "সরকারি এবং স্বায়ত্তশাসিত প্রায় সকল সেবা নাগরিক এখন একটি ক্লিকে ঘরে বসেই উপভোগ করতে পারবেন।", color = MinimalText, fontSize = 12.sp, lineHeight = 18.sp)
                         }
                     }
                 }
             }
 
             item {
-                Text("উপলব্ধ স্মার্ট নাগরিক ডিজিটাল সেবাসমূহ:", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(vertical = 4.dp))
+                Text(if (isEnglish) "Available Smart Citizen Digital Services:" else "উপলব্ধ স্মার্ট নাগরিক ডিজিটাল সেবাসমূহ:", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 15.sp, modifier = Modifier.padding(vertical = 4.dp))
             }
 
             items(onlineServices) { service ->
@@ -1990,13 +3360,13 @@ fun OnlineServicesScreen() {
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text(service.first, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                Text("অফিসিয়াল সরকারি লিংক সার্ভিস", color = Color.Gray, fontSize = 11.sp)
+                                Text(service.first, color = MinimalText, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(if (isEnglish) "Official Government Service Link" else "অফিসিয়াল সরকারি লিংক সার্ভিস", color = MinimalMutedText, fontSize = 11.sp)
                             }
                         }
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "প্রবেশ করুন",
+                            contentDescription = if (isEnglish) "Enter" else "প্রবেশ করুন",
                             tint = Color.Gray,
                             modifier = Modifier.size(24.dp)
                         )
@@ -2008,11 +3378,11 @@ fun OnlineServicesScreen() {
         if (shownLinkDialog != null) {
             val link = onlineServices.find { it.first == shownLinkDialog }?.second ?: ""
             MockOverlayDialog(
-                title = "ডিজিটাল লিংক ট্রানজিশন",
+                title = if (isEnglish) "Digital Link Transition" else "ডিজিটাল লিংক ট্রানজিশন",
                 onDismiss = { shownLinkDialog = null }
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("আপনি করিমগঞ্জ উপজেলা সেবা পোর্টাল থেকে সরাসরি অফিসিয়াল পোর্টালে ডাইরেক্ট হচ্ছেন:", color = Color.White)
+                    Text(if (isEnglish) "You are transitioning directly from Karimganj Upazila Service Portal to the official portal:" else "আপনি করিমগঞ্জ উপজেলা সেবা পোর্টাল থেকে সরাসরি অফিসিয়াল পোর্টালে ডাইরেক্ট হচ্ছেন:", color = Color.White)
                     Text(link, color = KarimganjGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(6.dp))
                     Button(
@@ -2024,7 +3394,7 @@ fun OnlineServicesScreen() {
                         colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("ব্রাউজারে খুলুন", fontWeight = FontWeight.Bold)
+                        Text(if (isEnglish) "Open in Browser" else "ব্রাউজারে খুলুন", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -2037,7 +3407,7 @@ fun OnlineServicesScreen() {
 // -------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ComplaintScreen() {
+fun ComplaintScreen(isEnglish: Boolean) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("user_profile_prefs", Context.MODE_PRIVATE) }
     val savedName = remember { sharedPrefs.getString("user_name", "") ?: "" }
@@ -2057,7 +3427,7 @@ fun ComplaintScreen() {
         containerColor = MinimalBackground,
         topBar = {
             TopAppBar(
-                title = { Text("অভিযোগ বক্স ও মতামত", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "Complaint Box & Feedback" else "অভিযোগ বক্স ও মতামত", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
             )
         }
@@ -2081,24 +3451,24 @@ fun ComplaintScreen() {
                     border = BorderStroke(1.dp, KarimganjCrimson.copy(alpha = 0.15f))
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Text("ডিজিটাল অভিযোগ সেল", color = KarimganjCrimson, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                        Text(if (isEnglish) "Digital Complaint Cell" else "ডিজিটাল অভিযোগ সেল", color = KarimganjCrimson, fontWeight = FontWeight.Bold, fontSize = 15.sp)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text("করিমগঞ্জ এবং সংলগ্ন অঞ্চলের কোনো অনিয়ম বা নাগরিক সেবা সংক্রান্ত মতামত সরাসরি লিখিত আকারে প্রশাসনিক দপ্তরে জমা দিন। আমরা অত্যন্ত গোপনীয়তা রক্ষা করব।", color = Color.LightGray, fontSize = 12.sp, lineHeight = 18.sp)
+                        Text(if (isEnglish) "Submit any irregularities or feedback regarding civic services in Karimganj and adjacent areas directly to the administrative office in writing. We will maintain absolute confidentiality." else "করিমগঞ্জ এবং সংলগ্ন অঞ্চলের কোনো অনিয়ম বা নাগরিক সেবা সংক্রান্ত মতামত সরাসরি লিখিত আকারে প্রশাসনিক দপ্তরে জমা দিন। আমরা অত্যন্ত গোপনীয়তা রক্ষা করব।", color = MinimalText, fontSize = 12.sp, lineHeight = 18.sp)
                     }
                 }
 
-                Text("আপনার তথ্য প্রদান করুন (বাধ্যতামূলক):", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(if (isEnglish) "Provide Your Information (Mandatory):" else "আপনার তথ্য প্রদান করুন (বাধ্যতামূলক):", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 14.sp)
 
                 // Input Name
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("আপনার পূর্ণ নাম", color = Color.Gray) },
+                    label = { Text(if (isEnglish) "Your Full Name" else "আপনার পূর্ণ নাম", color = Color.Gray) },
                     modifier = Modifier.fillMaxWidth().testTag("complaint_name"),
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MinimalText,
+                        unfocusedTextColor = MinimalText,
                         focusedContainerColor = CardBackgroundLight,
                         unfocusedContainerColor = CardBackgroundLight,
                         focusedLabelColor = KarimganjGreen
@@ -2109,21 +3479,21 @@ fun ComplaintScreen() {
                 OutlinedTextField(
                     value = phone,
                     onValueChange = { phone = it },
-                    label = { Text(if (isPhoneVerified) "ভেরিফাইড মোবাইল নম্বর" else "সক্রিয় মোবাইল নম্বর", color = Color.Gray) },
+                    label = { Text(if (isEnglish) (if (isPhoneVerified) "Verified Mobile Number" else "Active Mobile Number") else (if (isPhoneVerified) "ভেরিফাইড মোবাইল নম্বর" else "সক্রিয় মোবাইল নম্বর"), color = Color.Gray) },
                     modifier = Modifier.fillMaxWidth().testTag("complaint_phone"),
                     singleLine = true,
                     trailingIcon = {
                         if (isPhoneVerified) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "ভেরিফাইড নম্বর",
+                                contentDescription = if (isEnglish) "Verified Number" else "ভেরিফাইড নম্বর",
                                 tint = KarimganjGreen
                             )
                         }
                     },
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MinimalText,
+                        unfocusedTextColor = MinimalText,
                         focusedContainerColor = CardBackgroundLight,
                         unfocusedContainerColor = CardBackgroundLight,
                         focusedLabelColor = KarimganjGreen
@@ -2134,12 +3504,12 @@ fun ComplaintScreen() {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("অভিযোগের সংক্ষিপ্ত বিষয়", color = Color.Gray) },
+                    label = { Text(if (isEnglish) "Brief Subject of Complaint" else "অভিযোগের সংক্ষিপ্ত বিষয়", color = Color.Gray) },
                     modifier = Modifier.fillMaxWidth().testTag("complaint_title"),
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MinimalText,
+                        unfocusedTextColor = MinimalText,
                         focusedContainerColor = CardBackgroundLight,
                         unfocusedContainerColor = CardBackgroundLight,
                         focusedLabelColor = KarimganjGreen
@@ -2150,15 +3520,15 @@ fun ComplaintScreen() {
                 OutlinedTextField(
                     value = desc,
                     onValueChange = { desc = it },
-                    label = { Text("অভিযোগের বিস্তারিত বিবরণ লিখুন...", color = Color.Gray) },
+                    label = { Text(if (isEnglish) "Write detailed description of complaint..." else "অভিযোগের বিস্তারিত বিবরণ লিখুন...", color = Color.Gray) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(140.dp)
                         .testTag("complaint_desc"),
                     minLines = 4,
                     colors = TextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
+                        focusedTextColor = MinimalText,
+                        unfocusedTextColor = MinimalText,
                         focusedContainerColor = CardBackgroundLight,
                         unfocusedContainerColor = CardBackgroundLight,
                         focusedLabelColor = KarimganjGreen
@@ -2187,7 +3557,7 @@ fun ComplaintScreen() {
                     } else {
                         Icon(Icons.Default.EditNote, contentDescription = null)
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text("অভিযোগ জমা দিন", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text(if (isEnglish) "Submit Complaint" else "অভিযোগ জমা দিন", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
             }
@@ -2210,7 +3580,7 @@ fun ComplaintScreen() {
 
             if (shownSuccessDialog) {
                 MockOverlayDialog(
-                    title = "অভিযোগ সফলভাবে গৃহীত হয়েছে!",
+                    title = if (isEnglish) "Complaint Submitted Successfully!" else "অভিযোগ সফলভাবে গৃহীত হয়েছে!",
                     onDismiss = { shownSuccessDialog = false }
                 ) {
                     Column(
@@ -2228,7 +3598,7 @@ fun ComplaintScreen() {
                             Icon(Icons.Default.Campaign, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(36.dp))
                         }
                         Spacer(modifier = Modifier.height(14.dp))
-                        Text("অভিযোগ রেকর্ড করা হয়েছে এবং ট্র্যাকিং আইডি উৎপন্ন হয়েছে।", color = Color.LightGray, textAlign = TextAlign.Center, fontSize = 14.sp)
+                        Text(if (isEnglish) "The complaint has been recorded and a tracking ID has been generated." else "অভিযোগ রেকর্ড করা হয়েছে এবং ট্র্যাকিং আইডি উৎপন্ন হয়েছে।", color = Color.LightGray, textAlign = TextAlign.Center, fontSize = 14.sp)
                         Spacer(modifier = Modifier.height(10.dp))
                         Box(
                             modifier = Modifier
@@ -2239,7 +3609,7 @@ fun ComplaintScreen() {
                             Text(trackingId, color = KarimganjGreen, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                         Spacer(modifier = Modifier.height(14.dp))
-                        Text("উপজেলা প্রশাসন আপনার সাথে শীঘ্রই মোবাইলে যোগাযোগ করবে।", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
+                        Text(if (isEnglish) "The Upazila administration will contact you on your mobile shortly." else "উপজেলা প্রশাসন আপনার সাথে শীঘ্রই মোবাইলে যোগাযোগ করবে।", color = Color.Gray, fontSize = 11.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -2259,18 +3629,18 @@ fun ProfileDetailItem(isHeader: Boolean, label: String, value: String, icon: Ima
             modifier = Modifier
                 .size(34.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.White.copy(alpha = 0.05f)),
+                .background(KarimganjGreen.copy(alpha = 0.1f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(18.dp))
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.Gray, fontSize = 11.sp)
+            Text(label, color = MinimalMutedText, fontSize = 11.sp)
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 value,
-                color = Color.White,
+                color = MinimalText,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 lineHeight = 18.sp
@@ -2282,14 +3652,39 @@ fun ProfileDetailItem(isHeader: Boolean, label: String, value: String, icon: Ima
 // -------------------------------------------------------------
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(onCallHelpline: () -> Unit) {
+fun ProfileScreen(isEnglish: Boolean, onCallHelpline: () -> Unit) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("user_profile_prefs", Context.MODE_PRIVATE) }
 
-    var userName by remember { mutableStateOf(sharedPrefs.getString("user_name", "সম্মানিত করিমগঞ্জ নাগরিক") ?: "সম্মানিত করিমগঞ্জ নাগরিক") }
-    var userAddress by remember { mutableStateOf(sharedPrefs.getString("user_address", "উপজেলা পরিষদ, করিমগঞ্জ, কিশোরগঞ্জ") ?: "উপজেলা পরিষদ, করিমগঞ্জ, কিশোরগঞ্জ") }
-    var userNid by remember { mutableStateOf(sharedPrefs.getString("user_nid", "১৯৮৫৪৮১৬৭২৫৯৯১৩০৪") ?: "১৯৮৫৪৮১৬৭২৫৯৯১৩০৪") }
-    var userBio by remember { mutableStateOf(sharedPrefs.getString("user_bio", "আমি করিমগঞ্জ উপজেলার একজন সচেতন ও স্মার্ট নাগরিক। শিক্ষা, স্বাস্থ্য, কৃষি ও প্রশাসনিক বিভিন্ন আইসিটি সেবায় ডিজিটাল পোর্টাল ব্যবহার করে করিমগঞ্জের স্মার্ট টেকসই উন্নয়নে ভূমিকা রাখতে আগ্রহী।") ?: "আমি করিমগঞ্জ উপজেলার একজন সচেতন ও স্মার্ট নাগরিক। শিক্ষা, স্বাস্থ্য, কৃষি ও প্রশাসনিক বিভিন্ন আইসিটি সেবায় ডিজিটাল পোর্টাল ব্যবহার করে করিমগঞ্জের স্মার্ট টেকসই উন্নয়নে ভূমিকা রাখতে আগ্রহী।") }
+    val defaultName = if (isEnglish) "Honored Karimganj Citizen" else "সম্মানিত করিমগঞ্জ নাগরিক"
+    val defaultAddress = if (isEnglish) "Upazila Parishad, Karimganj, Kishoreganj" else "উপজেলা পরিষদ, করিমগঞ্জ, কিশোরগঞ্জ"
+    val defaultNid = if (isEnglish) "19854816725991304" else "১৯৮৫৪৮১৬৭২৫৯৯১৩০৪"
+    val defaultBio = if (isEnglish) "I am a conscious and smart citizen of Karimganj Upazila. Interested in playing a role in smart sustainable development of Karimganj using digital portal services." else "আমি করিমগঞ্জ উপজেলার একজন সচেতন ও স্মার্ট নাগরিক। শিক্ষা, স্বাস্থ্য, কৃষি ও প্রশাসনিক বিভিন্ন আইসিটি সেবায় ডিজিটাল পোর্টাল ব্যবহার করে করিমগঞ্জের স্মার্ট টেকসই উন্নয়নে ভূমিকা রাখতে আগ্রহী।"
+
+    var userName by remember { mutableStateOf(sharedPrefs.getString("user_name", defaultName) ?: defaultName) }
+    var userAddress by remember { mutableStateOf(sharedPrefs.getString("user_address", defaultAddress) ?: defaultAddress) }
+    var userNid by remember { mutableStateOf(sharedPrefs.getString("user_nid", defaultNid) ?: defaultNid) }
+    var userBio by remember { mutableStateOf(sharedPrefs.getString("user_bio", defaultBio) ?: defaultBio) }
+
+    LaunchedEffect(isEnglish) {
+        val otherName = if (isEnglish) "সম্মানিত করিমগঞ্জ নাগরিক" else "Honored Karimganj Citizen"
+        val otherAddress = if (isEnglish) "উপজেলা পরিষদ, করিমগঞ্জ, কিশোরগঞ্জ" else "Upazila Parishad, Karimganj, Kishoreganj"
+        val otherNid = if (isEnglish) "১৯৮৫৪৮১৬৭২৫৯৯১৩০৪" else "19854816725991304"
+        val otherBio = if (isEnglish) "আমি করিমগঞ্জ উপজেলার একজন সচেতন ও স্মার্ট নাগরিক। শিক্ষা, স্বাস্থ্য, কৃষি ও প্রশাসনিক বিভিন্ন আইসিটি সেবায় ডিজিটাল পোর্টাল ব্যবহার করে করিমগঞ্জের স্মার্ট টেকসই উন্নয়নে ভূমিকা রাখতে আগ্রহী।" else "I am a conscious and smart citizen of Karimganj Upazila. Interested in playing a role in smart sustainable development of Karimganj using digital portal services."
+
+        if (userName == otherName || userName.isBlank() || userName == "সম্মানিত করিমগঞ্জ নাগরিক" || userName == "Honored Karimganj Citizen") {
+            userName = defaultName
+        }
+        if (userAddress == otherAddress || userAddress.isBlank() || userAddress == "উপজেলা পরিষদ, করিমগঞ্জ, কিশোরগঞ্জ" || userAddress == "Upazila Parishad, Karimganj, Kishoreganj") {
+            userAddress = defaultAddress
+        }
+        if (userNid == otherNid || userNid.isBlank() || userNid == "১৯৮৫৪৮১৬৭২৫৯৯১৩০৪" || userNid == "19854816725991304") {
+            userNid = defaultNid
+        }
+        if (userBio == otherBio || userBio.isBlank() || userBio == "আমি করিমগঞ্জ উপজেলার একজন সচেতন ও স্মার্ট নাগরিক। শিক্ষা, স্বাস্থ্য, কৃষি ও প্রশাসনিক বিভিন্ন আইসিটি সেবায় ডিজিটাল পোর্টাল ব্যবহার করে করিমগঞ্জের স্মার্ট টেকসই উন্নয়নে ভূমিকা রাখতে আগ্রহী।" || userBio == "I am a conscious and smart citizen of Karimganj Upazila. Interested in playing a role in smart sustainable development of Karimganj using digital portal services.") {
+            userBio = defaultBio
+        }
+    }
 
     var userPhone by remember { mutableStateOf(sharedPrefs.getString("user_phone", "") ?: "") }
     var isPhoneVerified by remember { mutableStateOf(sharedPrefs.getBoolean("phone_verified", false)) }
@@ -2306,7 +3701,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
         containerColor = MinimalBackground,
         topBar = {
             TopAppBar(
-                title = { Text("স্মার্ট নাগরিক প্রোফাইল", color = Color.White, fontWeight = FontWeight.Bold) },
+                title = { Text(if (isEnglish) "Smart Citizen Profile" else "স্মার্ট নাগরিক প্রোফাইল", color = Color.White, fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = HeaderRed)
             )
         }
@@ -2339,34 +3734,34 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                     .background(KarimganjGreen.copy(0.15f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(Icons.Default.Person, contentDescription = "নাগরিক ছবি", tint = KarimganjGreen, modifier = Modifier.size(48.dp))
+                                Icon(Icons.Default.Person, contentDescription = if (isEnglish) "Citizen Photo" else "নাগরিক ছবি", tint = KarimganjGreen, modifier = Modifier.size(48.dp))
                             }
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.Center
                             ) {
-                                Text(userName, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
+                                Text(userName, color = MinimalText, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
                                 if (isPhoneVerified) {
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "ভেরিফাইড নাগরিক",
+                                        contentDescription = if (isEnglish) "Verified Citizen" else "ভেরিফাইড নাগরিক",
                                         tint = KarimganjGreen,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
-                            Text("ডিজিটাল নাগরিক আইডেন্টিটি পোর্টাল", color = Color.Gray, fontSize = 12.sp)
+                            Text(if (isEnglish) "Digital Citizen Identity Portal" else "ডিজিটাল নাগরিক আইডেন্টিটি পোর্টাল", color = MinimalMutedText, fontSize = 12.sp)
 
                             Spacer(modifier = Modifier.height(14.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
+                                    .background(KarimganjGreen.copy(0.08f))
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Text("UID: KMJ-309-901", color = Color.LightGray, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text("UID: KMJ-309-901", color = KarimganjGreen, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -2399,8 +3794,8 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "নাগরিক মোবাইল ভেরিফিকেশন",
-                                        color = Color.White,
+                                        text = if (isEnglish) "Citizen Mobile Verification" else "নাগরিক মোবাইল ভেরিফিকেশন",
+                                        color = MinimalText,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )
@@ -2413,7 +3808,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = if (isPhoneVerified) "ভেরিফাইড" else "ভেরিফাইড নয়",
+                                        text = if (isEnglish) (if (isPhoneVerified) "Verified" else "Not Verified") else (if (isPhoneVerified) "ভেরিফাইড" else "ভেরিফাইড নয়"),
                                         color = if (isPhoneVerified) KarimganjGreen else KarimganjCrimson,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -2421,7 +3816,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 }
                             }
                             
-                            Divider(color = Color.White.copy(alpha = 0.05f))
+                            Divider(color = CardBorderColor)
                             
                             if (isPhoneVerified) {
                                 Row(
@@ -2431,21 +3826,21 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                     Icon(Icons.Default.Phone, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = "সংযুক্ত নম্বর: $userPhone",
-                                        color = Color.LightGray,
+                                        text = if (isEnglish) "Connected Number: $userPhone" else "সংযুক্ত নম্বর: $userPhone",
+                                        color = MinimalText,
                                         fontSize = 13.sp
                                     )
                                 }
                                 Text(
-                                    text = "আপনার মোবাইল নম্বরটি সফলভাবে ভেরিফাই করা হয়েছে। আপনি এখন চ্যাট রুমে ও অভিযোগ বক্সে একজন ভেরিফাইড নাগরিক হিসেবে চেকমার্ক ও অগ্রাধিকার পাবেন।",
-                                    color = Color.Gray,
+                                    text = if (isEnglish) "Your mobile number has been successfully verified. You will now receive verified checkmark and priority in the chat room and complaint box." else "আপনার মোবাইল নম্বরটি সফলভাবে ভেরিফাই করা হয়েছে। আপনি এখন চ্যাট রুমে ও অভিযোগ বক্সে একজন ভেরিফাইড নাগরিক হিসেবে চেকমার্ক ও অগ্রাধিকার পাবেন।",
+                                    color = MinimalMutedText,
                                     fontSize = 11.sp,
                                     lineHeight = 16.sp
                                 )
                             } else {
                                 Text(
-                                    text = "অনলাইন নাগরিক চ্যাট বা অভিযোগ সেবাগুলোর সত্যতা জোরদার করতে এবং স্প্যাম প্রতিরোধ করতে আপনার মোবাইল নম্বরটি ভেরিফাই করুন।",
-                                    color = Color.LightGray,
+                                    text = if (isEnglish) "Verify your mobile number to strengthen the authenticity of online citizen chats or complaint services and prevent spam." else "অনলাইন নাগরিক চ্যাট বা অভিযোগ সেবাগুলোর সত্যতা জোরদার করতে এবং স্প্যাম প্রতিরোধ করতে আপনার মোবাইল নম্বরটি ভেরিফাই করুন।",
+                                    color = MinimalMutedText,
                                     fontSize = 12.sp,
                                     lineHeight = 18.sp
                                 )
@@ -2457,7 +3852,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 ) {
                                     Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("মোবাইল নম্বর ভেরিফাই করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Text(if (isEnglish) "Verify Mobile Number" else "মোবাইল নম্বর ভেরিফাই করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -2483,8 +3878,8 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "আমার নাগরিক পরিচিতি ও তথ্য",
-                                    color = Color.White,
+                                    text = if (isEnglish) "My Citizen Profile & Information" else "আমার নাগরিক পরিচিতি ও তথ্য",
+                                    color = MinimalText,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 15.sp
                                 )
@@ -2498,18 +3893,18 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                     },
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "সম্পাদনা", tint = KarimganjGreen, modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.Edit, contentDescription = if (isEnglish) "Edit" else "সম্পাদনা", tint = KarimganjGreen, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("পরিমার্জন করুন", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (isEnglish) "Edit" else "পরিমার্জন করুন", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
-                            Divider(color = Color.White.copy(alpha = 0.05f))
+                            Divider(color = CardBorderColor)
 
-                            ProfileDetailItem(isHeader = false, label = "নাগরিক পূর্ণ নাম", value = userName, icon = Icons.Default.Person)
-                            ProfileDetailItem(isHeader = false, label = "স্থায়ী ও বর্তমান ঠিকানা", value = userAddress, icon = Icons.Default.LocationOn)
-                            ProfileDetailItem(isHeader = false, label = "জাতীয় পরিচয়পত্র নম্বর (NID)", value = userNid, icon = Icons.Default.Fingerprint)
-                            ProfileDetailItem(isHeader = true, label = "বিস্তারিত প্রোফাইল ও বিবরণ", value = userBio, icon = Icons.Default.Description)
+                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "Citizen Full Name" else "নাগরিক পূর্ণ নাম", value = userName, icon = Icons.Default.Person)
+                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "Permanent & Present Address" else "স্থায়ী ও বর্তমান ঠিকানা", value = userAddress, icon = Icons.Default.LocationOn)
+                            ProfileDetailItem(isHeader = false, label = if (isEnglish) "National Identity Card Number (NID)" else "জাতীয় পরিচয়পত্র নম্বর (NID)", value = userNid, icon = Icons.Default.Fingerprint)
+                            ProfileDetailItem(isHeader = true, label = if (isEnglish) "Detailed Profile & Biography" else "বিস্তারিত প্রোফাইল ও বিবরণ", value = userBio, icon = Icons.Default.Description)
 
                             Spacer(modifier = Modifier.height(4.dp))
 
@@ -2527,7 +3922,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             ) {
                                 Icon(Icons.Default.SettingsSuggest, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("প্রোফাইল তথ্য আপডেট করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(if (isEnglish) "Update Profile Info" else "প্রোফাইল তথ্য আপডেট করুন", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
                         }
                     }
@@ -2535,7 +3930,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
 
                 // Quick Hotlines segment
                 item {
-                    Text("সহায়তা ও সরকারি হটলাইন সমূহ:", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(if (isEnglish) "Support & Government Hotlines:" else "সহায়তা ও সরকারি হটলাইন সমূহ:", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
 
                 item {
@@ -2545,15 +3940,15 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                         border = BorderStroke(1.dp, CardBorderColor)
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            HotlineProfileRow("জাতীয় সেবা এবং তথ্য সহায়ক সেল (333)", "৩৩৩") {
+                            HotlineProfileRow(if (isEnglish) "National Service & Info Helpline (333)" else "জাতীয় সেবা এবং তথ্য সহায়ক সেল (333)", if (isEnglish) "333" else "৩৩৩") {
                                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:333")))
                             }
-                            Divider(color = Color.White.copy(alpha = 0.05f))
-                            HotlineProfileRow("জাতীয় জরুরি সেবা আইন প্রয়োগ কেন্দ্র (999)", "৯৯৯") {
+                            Divider(color = CardBorderColor)
+                            HotlineProfileRow(if (isEnglish) "National Emergency Service (999)" else "জাতীয় জরুরি সেবা আইন প্রয়োগ কেন্দ্র (999)", if (isEnglish) "999" else "৯৯৯") {
                                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:999")))
                             }
-                            Divider(color = Color.White.copy(alpha = 0.05f))
-                            HotlineProfileRow("নারীদের ওপর সহিংসতা প্রতিরোধ হেল্প সেল (109)", "১০৯") {
+                            Divider(color = CardBorderColor)
+                            HotlineProfileRow(if (isEnglish) "Violence Against Women Prevention Helpline (109)" else "নারীদের ওপর সহিংসতা প্রতিরোধ হেল্প সেল (109)", if (isEnglish) "109" else "১০৯") {
                                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:109")))
                             }
                         }
@@ -2562,7 +3957,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
 
                 // System specs segment
                 item {
-                    Text("অ্যাপ্লিকেশন তথ্য এবং সংযোগ স্ট্যাটাস:", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(if (isEnglish) "Application Info & Connection Status:" else "অ্যাপ্লিকেশন তথ্য এবং সংযোগ স্ট্যাটাস:", color = Color(0xFF0F5132), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
 
                 item {
@@ -2573,18 +3968,18 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                     ) {
                         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Column {
-                                Text("লোকাল ডেটাবেস ক্যাশিং", color = Color.Gray, fontSize = 11.sp)
-                                Text("সক্রিয় SQLite Room Database ৩.২", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isEnglish) "Local Database Caching" else "লোকাল ডেটাবেস ক্যাশিং", color = MinimalMutedText, fontSize = 11.sp)
+                                Text(if (isEnglish) "Active SQLite Room Database 3.2" else "সক্রিয় SQLite Room Database ৩.২", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
-                            Divider(color = Color.White.copy(alpha = 0.05f))
+                            Divider(color = CardBorderColor)
                             Column {
-                                Text("ক্লাউড সিঙ্ক্রোনাইজেশন", color = Color.Gray, fontSize = 11.sp)
-                                Text("সরাসরি ফায়ারবেস ক্লাউড ফায়ারস্টোর যুক্ত", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isEnglish) "Cloud Synchronization" else "ক্লাউড সিঙ্ক্রোনাইজেশন", color = MinimalMutedText, fontSize = 11.sp)
+                                Text(if (isEnglish) "Directly connected to Firebase Cloud Firestore" else "সরাসরি ফায়ারবেস ক্লাউড ফায়ারস্টোর যুক্ত", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
-                            Divider(color = Color.White.copy(alpha = 0.05f))
+                            Divider(color = CardBorderColor)
                             Column {
-                                Text("অ্যাপ সংস্করণ", color = Color.Gray, fontSize = 11.sp)
-                                Text("সংস্করণ ৩.২.০ (স্মার্ট বাংলাদেশ স্পেশাল)", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Text(if (isEnglish) "App Version" else "অ্যাপ সংস্করণ", color = MinimalMutedText, fontSize = 11.sp)
+                                Text(if (isEnglish) "Version 3.2.0 (Smart Bangladesh Special)" else "সংস্করণ ৩.২.০ (স্মার্ট বাংলাদেশ স্পেশাল)", color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -2600,7 +3995,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.BorderColor, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("নাগরিক প্রোফাইল পরিমার্জন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Edit Citizen Profile" else "নাগরিক প্রোফাইল পরিমার্জন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     },
                     text = {
@@ -2610,18 +4005,18 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("প্রোফাইল আপডেট করতে তথ্যগুলো পরিমার্জন করুন:", color = Color.LightGray, fontSize = 12.sp)
+                            Text(if (isEnglish) "Update details below to change your profile:" else "প্রোফাইল আপডেট করতে তথ্যগুলো পরিমার্জন করুন:", color = Color.LightGray, fontSize = 12.sp)
 
                             // Name input
                             OutlinedTextField(
                                 value = editName,
                                 onValueChange = { editName = it },
-                                label = { Text("পূর্ণ নাম (বাংলা বা ইংরেজি)", color = Color.Gray, fontSize = 12.sp) },
+                                label = { Text(if (isEnglish) "Full Name (Bangla or English)" else "পূর্ণ নাম (বাংলা বা ইংরেজি)", color = Color.Gray, fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth().testTag("edit_profile_name"),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
+                                    focusedTextColor = MinimalText,
+                                    unfocusedTextColor = MinimalText,
                                     focusedContainerColor = MinimalBackground,
                                     unfocusedContainerColor = MinimalBackground,
                                     focusedLabelColor = KarimganjGreen,
@@ -2633,12 +4028,12 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             OutlinedTextField(
                                 value = editAddress,
                                 onValueChange = { editAddress = it },
-                                label = { Text("স্থায়ী ও বর্তমান ঠিকানা", color = Color.Gray, fontSize = 12.sp) },
+                                label = { Text(if (isEnglish) "Permanent & Present Address" else "স্থায়ী ও বর্তমান ঠিকানা", color = Color.Gray, fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth().testTag("edit_profile_address"),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
+                                    focusedTextColor = MinimalText,
+                                    unfocusedTextColor = MinimalText,
                                     focusedContainerColor = MinimalBackground,
                                     unfocusedContainerColor = MinimalBackground,
                                     focusedLabelColor = KarimganjGreen,
@@ -2650,12 +4045,12 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             OutlinedTextField(
                                 value = editNid,
                                 onValueChange = { editNid = it },
-                                label = { Text("জাতীয় পরিচয়পত্র নম্বর (NID)", color = Color.Gray, fontSize = 12.sp) },
+                                label = { Text(if (isEnglish) "National Identity Card Number (NID)" else "জাতীয় পরিচয়পত্র নম্বর (NID)", color = Color.Gray, fontSize = 12.sp) },
                                 modifier = Modifier.fillMaxWidth().testTag("edit_profile_nid"),
                                 singleLine = true,
                                 colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
+                                    focusedTextColor = MinimalText,
+                                    unfocusedTextColor = MinimalText,
                                     focusedContainerColor = MinimalBackground,
                                     unfocusedContainerColor = MinimalBackground,
                                     focusedLabelColor = KarimganjGreen,
@@ -2667,15 +4062,15 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             OutlinedTextField(
                                 value = editBio,
                                 onValueChange = { editBio = it },
-                                label = { Text("বিস্তারিত প্রোফাইল / বায়ো বিবরণ", color = Color.Gray, fontSize = 12.sp) },
+                                label = { Text(if (isEnglish) "Detailed Profile / Bio Description" else "বিস্তারিত প্রোফাইল / বায়ো বিবরণ", color = Color.Gray, fontSize = 12.sp) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(100.dp)
                                     .testTag("edit_profile_bio"),
                                 minLines = 3,
                                 colors = TextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
+                                    focusedTextColor = MinimalText,
+                                    unfocusedTextColor = MinimalText,
                                     focusedContainerColor = MinimalBackground,
                                     unfocusedContainerColor = MinimalBackground,
                                     focusedLabelColor = KarimganjGreen,
@@ -2706,14 +4101,14 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             enabled = editName.isNotBlank() && editAddress.isNotBlank(),
                             modifier = Modifier.testTag("save_profile_btn")
                         ) {
-                            Text("সংরক্ষণ করুন", fontWeight = FontWeight.Bold, color = Color.White)
+                            Text(if (isEnglish) "Save" else "সংরক্ষণ করুন", fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     },
                     dismissButton = {
                         TextButton(
                             onClick = { showEditDialog = false }
                         ) {
-                            Text("বাতিল", color = Color.Gray)
+                            Text(if (isEnglish) "Cancel" else "বাতিল", color = Color.Gray)
                         }
                     }
                 )
@@ -2736,7 +4131,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Phone, contentDescription = null, tint = KarimganjGreen, modifier = Modifier.size(24.dp))
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text("মোবাইল নম্বর ভেরিফিকেশন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(if (isEnglish) "Mobile Number Verification" else "মোবাইল নম্বর ভেরিফিকেশন", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     },
                     text = {
@@ -2746,7 +4141,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                         ) {
                             if (verificationStep == 0) {
                                 Text(
-                                    text = "করিমগঞ্জ অনলাইন নাগরিক চ্যাট এবং বিভিন্ন পোর্টাল সেবার সত্যতা নিশ্চিত করতে আপনার ১১ ডিজিটের সক্রিয় মোবাইল নম্বরটি লিখুন।",
+                                    text = if (isEnglish) "Enter your 11-digit active mobile number to verify authenticity for online citizen chat and other portal services." else "করিমগঞ্জ অনলাইন নাগরিক চ্যাট এবং বিভিন্ন পোর্টাল সেবার সত্যতা নিশ্চিত করতে আপনার ১১ ডিজিটের সক্রিয় মোবাইল নম্বরটি লিখুন।",
                                     color = Color.LightGray,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp
@@ -2755,12 +4150,12 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 OutlinedTextField(
                                     value = inputPhone,
                                     onValueChange = { inputPhone = it.filter { char -> char.isDigit() } },
-                                    label = { Text("মোবাইল নম্বর (যেমন: 01712345678)", color = Color.Gray, fontSize = 12.sp) },
+                                    label = { Text(if (isEnglish) "Mobile Number (e.g. 01712345678)" else "মোবাইল নম্বর (যেমন: 01712345678)", color = Color.Gray, fontSize = 12.sp) },
                                     modifier = Modifier.fillMaxWidth().testTag("verify_phone_input"),
                                     singleLine = true,
                                     colors = TextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White,
+                                        focusedTextColor = MinimalText,
+                                        unfocusedTextColor = MinimalText,
                                         focusedContainerColor = MinimalBackground,
                                         unfocusedContainerColor = MinimalBackground,
                                         focusedLabelColor = KarimganjGreen,
@@ -2775,7 +4170,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp)) {
                                         Text(
-                                            text = "🔒 নিরাপত্তা গেটওয়ে ও টোকেন সক্রিয়",
+                                            text = if (isEnglish) "🔒 Security Gateway & Token Active" else "🔒 can-security-gateway",
                                             color = Color(0xFF81D4FA),
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.sp
@@ -2795,7 +4190,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 }
                             } else {
                                 Text(
-                                    text = "আপনার নম্বর +88$inputPhone ভেরিফাই করার জন্য ওটিপি (OTP) পাঠানো হয়েছে। অনুগ্রহ করে কোডটি লিখুন।",
+                                    text = if (isEnglish) "An OTP has been sent to +88$inputPhone to verify your number. Please enter the code." else "আপনার নম্বর +88$inputPhone ভেরিফাই করার জন্য ওটিপি (OTP) পাঠানো হয়েছে। অনুগ্রহ করে কোডটি লিখুন।",
                                     color = Color.LightGray,
                                     fontSize = 13.sp,
                                     lineHeight = 18.sp
@@ -2804,12 +4199,12 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                 OutlinedTextField(
                                     value = inputOtp,
                                     onValueChange = { inputOtp = it.filter { char -> char.isDigit() } },
-                                    label = { Text("৬-ডিজিটের ওটিপি কোড (OTP)", color = Color.Gray, fontSize = 12.sp) },
+                                    label = { Text(if (isEnglish) "6-Digit OTP Code (OTP)" else "৬-ডিজিটের ওটিপি কোড (OTP)", color = Color.Gray, fontSize = 12.sp) },
                                     modifier = Modifier.fillMaxWidth().testTag("verify_otp_input"),
                                     singleLine = true,
                                     colors = TextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White,
+                                        focusedTextColor = MinimalText,
+                                        unfocusedTextColor = MinimalText,
                                         focusedContainerColor = MinimalBackground,
                                         unfocusedContainerColor = MinimalBackground,
                                         focusedLabelColor = KarimganjGreen,
@@ -2823,7 +4218,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "কোড পাননি?",
+                                        text = if (isEnglish) "Didn't receive code?" else "কোড পাননি?",
                                         color = Color.Gray,
                                         fontSize = 12.sp
                                     )
@@ -2832,12 +4227,12 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                             generatedOtp = (100000..999999).random().toString()
                                             android.widget.Toast.makeText(
                                                 context,
-                                                "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
+                                                if (isEnglish) "✉️ [Karimganj Smart Portal] OTP Code is: $generatedOtp" else "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
                                                 android.widget.Toast.LENGTH_LONG
                                             ).show()
                                         }
                                     ) {
-                                        Text("পুনরায় পাঠান", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text(if (isEnglish) "Resend" else "পুনরায় পাঠান", color = KarimganjGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
 
@@ -2857,13 +4252,13 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                         generatedOtp = (100000..999999).random().toString()
                                         android.widget.Toast.makeText(
                                             context,
-                                            "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
+                                            if (isEnglish) "✉️ [Karimganj Smart Portal] OTP Code is: $generatedOtp" else "✉️ [করিমগঞ্জ স্মার্ট পোর্টাল] ওটিপি কোডটি হলো: $generatedOtp",
                                             android.widget.Toast.LENGTH_LONG
                                         ).show()
                                         verificationStep = 1
                                         isProcessing = false
                                     } else {
-                                        verificationError = "অনুগ্রহ করে একটি সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।"
+                                        verificationError = if (isEnglish) "Please enter a correct 11-digit mobile number." else "অনুগ্রহ করে একটি সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন।"
                                     }
                                 } else {
                                     if (inputOtp == generatedOtp || inputOtp == "123456") {
@@ -2876,9 +4271,9 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                                         userPhone = "+88$inputPhone"
                                         isPhoneVerified = true
                                         showVerificationDialog = false
-                                        android.widget.Toast.makeText(context, "অভিনন্দন! আপনার মোবাইল নম্বরটি সফলভাবে ভেরিফাই করা হয়েছে।", android.widget.Toast.LENGTH_SHORT).show()
+                                        android.widget.Toast.makeText(context, if (isEnglish) "Congratulations! Your mobile number has been successfully verified." else "অভিনন্দন! আপনার মোবাইল নম্বরটি সফলভাবে ভেরিফাই করা হয়েছে।", android.widget.Toast.LENGTH_SHORT).show()
                                     } else {
-                                        verificationError = "ভুল ওটিপি কোড! অনুগ্রহ করে সঠিক কোডটি দিন।"
+                                        verificationError = if (isEnglish) "Incorrect OTP code! Please enter the correct code." else "ভুল ওটিপি কোড! অনুগ্রহ করে সঠিক কোডটি দিন।"
                                     }
                                 }
                             },
@@ -2889,7 +4284,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                             if (isProcessing) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp))
                             } else {
-                                Text(if (verificationStep == 0) "ওটিপি পাঠান" else "নিশ্চিত করুন", fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(if (verificationStep == 0) (if (isEnglish) "Send OTP" else "ওটিপি পাঠান") else (if (isEnglish) "Confirm" else "নিশ্চিত করুন"), fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     },
@@ -2897,7 +4292,7 @@ fun ProfileScreen(onCallHelpline: () -> Unit) {
                         TextButton(
                             onClick = { showVerificationDialog = false }
                         ) {
-                            Text("বাতিল", color = Color.Gray)
+                            Text(if (isEnglish) "Cancel" else "বাতিল", color = Color.Gray)
                         }
                     }
                 )
@@ -2914,8 +4309,8 @@ fun HotlineProfileRow(label: String, number: String, onDial: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text("হটলাইন নম্বর: $number", color = Color.Gray, fontSize = 11.sp)
+            Text(label, color = MinimalText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Text("হটলাইন নম্বর: $number", color = MinimalMutedText, fontSize = 11.sp)
         }
         Button(
             onClick = onDial,
@@ -3329,16 +4724,20 @@ data class AmbulanceData(val name: String, val desc: String, val phone: String)
 data class PharmacyData(val name: String, val desc: String, val phone: String)
 
 @Composable
-fun RealtimeChatScreen(onBack: () -> Unit) {
+fun RealtimeChatScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     var messageText by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<ChatMessage>() }
+    val firebaseMessages = remember { mutableStateListOf<ChatMessage>() }
     var connectionError by remember { mutableStateOf<String?>(null) }
     var isConnected by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val sharedPrefs = remember { context.getSharedPreferences("karimganj_chat_prefs", Context.MODE_PRIVATE) }
     val profilePrefs = remember { context.getSharedPreferences("user_profile_prefs", Context.MODE_PRIVATE) }
     val isProfileVerified = remember { profilePrefs.getBoolean("phone_verified", false) }
+
+    // Chat mode tabs state: 0 = AI Helpdesk, 1 = Public Chatroom
+    var selectedTabMode by remember { mutableStateOf(0) }
 
     val mySenderId = remember {
         var id = sharedPrefs.getString("sender_id", null)
@@ -3354,6 +4753,7 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
     var isEditingName by remember { mutableStateOf(false) }
     var tempNameInput by remember { mutableStateOf(nickname) }
 
+    // Firebase Database Reference
     val dbRef = remember {
         try {
             FirebaseDatabase.getInstance().getReference("chat_messages")
@@ -3363,6 +4763,55 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
         }
     }
 
+    // AI Chat History
+    val aiMessages = remember {
+        mutableStateListOf(
+            ChatMessage(
+                id = "welcome_msg",
+                sender = "করিমগঞ্জ ডিজিটাল সহকারী",
+                text = "আসসালামু আলাইকুম! করিমগঞ্জ নাগরিক সেবা সহায়তা কেন্দ্রে আপনাকে স্বাগতম। আমি আপনার ডিজিটাল সহকারী। করিমগঞ্জ উপজেলার যেকোনো নাগরিক সেবা, হটলাইন নম্বর, স্বাস্থ্যসেবা বা অভিযোগ প্রক্রিয়া সম্পর্কে তথ্য পেতে নিচের যেকোনো বাটনে ট্যাপ করুন অথবা সরাসরি আপনার প্রশ্নটি বাংলায় লিখুন।",
+                timestamp = System.currentTimeMillis(),
+                senderId = "bot",
+                verified = true
+            )
+        )
+    }
+    var isAiTyping by remember { mutableStateOf(false) }
+    var aiTypingText by remember { mutableStateOf("") }
+
+    // Demo Public Chatroom fallback messages
+    val publicMessages = remember {
+        mutableStateListOf(
+            ChatMessage(
+                id = "mock_msg_1",
+                sender = "আব্দুর রহমান",
+                text = "করিমগঞ্জ বাজারে নতুন ড্রেনেজ ব্যবস্থার কারণে এবার বর্ষায় রাস্তায় পানি জমেনি। ধন্যবাদ উপজেলা প্রশাসনকে!",
+                timestamp = System.currentTimeMillis() - 7200000,
+                senderId = "citizen_1",
+                verified = true
+            ),
+            ChatMessage(
+                id = "mock_msg_2",
+                sender = "সুমি আক্তার",
+                text = "অনলাইন সেবাসমূহ ব্যবহার করে ঘরে বসেই জন্ম নিবন্ধনের আবেদন করেছি, প্রক্রিয়াটা খুবই সহজ ও দ্রুত ছিল।",
+                timestamp = System.currentTimeMillis() - 3600000,
+                senderId = "citizen_2",
+                verified = false
+            ),
+            ChatMessage(
+                id = "mock_msg_3",
+                sender = "কামরুল হাসান",
+                text = "উপজেলা স্বাস্থ্য কমপ্লেক্সের জরুরি বিভাগের সেবা অনেক উন্নত হয়েছে। গতকাল জরুরি প্রয়োজনে রাত ১২টায় তাৎক্ষণিক ডাক্তার ও অক্সিজেন সহায়তা পেয়েছি।",
+                timestamp = System.currentTimeMillis() - 1800000,
+                senderId = "citizen_3",
+                verified = true
+            )
+        )
+    }
+    var isPublicTyping by remember { mutableStateOf(false) }
+    var publicTypingName by remember { mutableStateOf("") }
+
+    // Firebase live synchronization
     LaunchedEffect(dbRef) {
         if (dbRef == null) return@LaunchedEffect
         
@@ -3379,16 +4828,16 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
             val query = dbRef.limitToLast(50)
             query.addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
-                    messages.clear()
+                    firebaseMessages.clear()
                     for (child in snapshot.children) {
                         val sender = child.child("sender").getValue(String::class.java) ?: "অপরিচিত নাগরিক"
                         val text = child.child("text").getValue(String::class.java) ?: ""
                         val timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0L
                         val senderId = child.child("senderId").getValue(String::class.java) ?: ""
                         val verified = child.child("verified").getValue(Boolean::class.java) ?: false
-                        messages.add(ChatMessage(child.key ?: "", sender, text, timestamp, senderId, verified))
+                        firebaseMessages.add(ChatMessage(child.key ?: "", sender, text, timestamp, senderId, verified))
                     }
-                    messages.sortBy { it.timestamp }
+                    firebaseMessages.sortBy { it.timestamp }
                 }
 
                 override fun onCancelled(error: DatabaseError) {
@@ -3400,19 +4849,213 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
         }
     }
 
-    val sendMessage = {
-        if (messageText.trim().isNotEmpty() && dbRef != null) {
-            val key = dbRef.push().key
-            if (key != null) {
-                val msg = mapOf(
-                    "sender" to nickname,
-                    "text" to messageText.trim(),
-                    "timestamp" to System.currentTimeMillis(),
-                    "senderId" to mySenderId,
-                    "verified" to isProfileVerified
+    // AI Helper response generation
+    fun getBotResponse(userMessage: String): String {
+        val msg = userMessage.lowercase()
+        return when {
+            msg.contains("অ্যাম্বুলেন্স") || msg.contains("ambulance") || msg.contains("হাসপাতাল") || msg.contains("hospital") || 
+            msg.contains("ডাক্তার") || msg.contains("doctor") || msg.contains("স্বাস্থ্য") || msg.contains("চিকিৎসা") || 
+            msg.contains("ফার্মেসি") || msg.contains("ঔষধ") -> {
+                "🏥 **করিমগঞ্জ উপজেলা স্বাস্থ্যসেবা তথ্য:**\n\n" +
+                "*১. করিমগঞ্জ উপজেলা স্বাস্থ্য কমপ্লেক্স:*\n" +
+                "- **জরুরি বিভাগ হটলাইন:** ০১৭৩০-১১২২৩৩ (২৪ ঘণ্টা খোলা)\n" +
+                "- **জরুরি অ্যাম্বুলেন্স সেবা:** ০১৭৩০-১১২২৩৪, ০১৯১১-২২৩৩৪৪\n\n" +
+                "*২. রক্তদান ও মেডিকেল টিম:*\n" +
+                "- **করিমগঞ্জ ব্লাড ডোনার্স ক্লাব:** ০১৮১২-৩৪৫৬৭৮\n\n" +
+                "*৩. ঔষধ ও ফার্মেসি:*\n" +
+                "- করিমগঞ্জ বাজারের প্রধান ফার্মেসিগুলো ২৪ ঘণ্টা সেবা দিয়ে থাকে।\n\n" +
+                "আপনার কি নির্দিষ্ট কোনো ডাক্তারের অ্যাপয়েন্টমেন্ট বা স্পেশালিটি সম্পর্কে জানা প্রয়োজন?"
+            }
+            msg.contains("অভিযোগ") || msg.contains("complain") || msg.contains("নালিশ") || msg.contains("সমস্যা") || 
+            msg.contains("বিদ্যুৎ") || msg.contains("ড্রেন") || msg.contains("রাস্তা") || msg.contains("পানি") || 
+            msg.contains("লোডশেডিং") || msg.contains("অফিস") -> {
+                "📝 **করিমগঞ্জ অভিযোগ ও প্রতিকার সেল:**\n\n" +
+                "আমাদের অ্যাপের প্রধান মেনু থেকে সরাসরি **'অভিযোগ' (Complaint)** ট্যাবে গিয়ে আপনি যেকোনো সমস্যা (রাস্তাঘাট, ড্রেনেজ, বিদ্যুৎ বিভ্রাট, অবৈধ দখল ইত্যাদি) সম্পর্কে ছবি এবং বিবরণসহ অভিযোগ দায়ের করতে পারেন।\n\n" +
+                "*প্রক্রিয়া:*\n" +
+                "১. অ্যাপের নিচের বারে **'অভিযোগ'** আইকনে চাপ দিন।\n" +
+                "২. অভিযোগের ধরন নির্বাচন করুন (যেমন: রাস্তা, বিদ্যুৎ, স্বাস্থ্য ইত্যাদি)।\n" +
+                "৩. আপনার অভিযোগের বিবরণ লিখুন এবং প্রয়োজনে ছবি আপলোড করুন।\n" +
+                "৪. 'অভিযোগ জমা দিন' বাটনে ট্যাপ করুন।\n\n" +
+                "আমাদের উপজেলা প্রশাসন ও পৌরসভা টিম প্রতিটি অভিযোগ অত্যন্ত গুরুত্বের সাথে পর্যালোচনা করে দ্রুততম সময়ে সমাধান করে থাকে।"
+            }
+            msg.contains("ভূমি") || msg.contains("land") || msg.contains("খতিয়ান") || msg.contains("পর্চা") || 
+            msg.contains("দলিল") || msg.contains("নামজারী") || msg.contains("মিউটেশন") || msg.contains("খারিজ") -> {
+                "🏛️ **করিমগঞ্জ উপজেলা ভূমি সেবা গাইড:**\n\n" +
+                "উপজেলা ভূমি অফিস ও ইউনিয়ন তথ্য কেন্দ্রের মাধ্যমে আপনি ডিজিটাল উপায়ে আপনার জমির সকল সেবা গ্রহণ করতে পারেন।\n\n" +
+                "*প্রধান ডিজিটাল সেবা সমূহ:*\n" +
+                "- **ই-নামজারী (e-Mutation):** অনলাইনে আবেদনের জন্য land.gov.bd পোর্টালে প্রবেশ করুন। সরকারি ফি ১১৫০/- টাকা।\n" +
+                "- **ডিজিটাল পর্চা/খতিয়ান অনুসন্ধান:** আপনার আরএস/এসএ খতিয়ান অনুসন্ধান ও কপির জন্য ভিজিট করুন eporcha.gov.bd।\n\n" +
+                "*প্রয়োজনীয় কাগজপত্র:*\n" +
+                "- মূল দলিলের কপি ও ভায়া দলিল।\n" +
+                "- সর্বশেষ দাখিলা (ভূমি উন্নয়ন করের রসিদ)।\n" +
+                "- ওয়ারিশন সনদ (প্রযোজ্য ক্ষেত্রে)।"
+            }
+            msg.contains("ইউনিয়ন") || msg.contains("union") || msg.contains("ইউপি") || msg.contains("চেয়ারম্যান") || 
+            msg.contains("মেম্বার") || msg.contains("প্রত্যয়ন") || msg.contains("জন্ম নিবন্ধন") || msg.contains("প্রত্যয়ন") || msg.contains("নাগরিকত্ব") -> {
+                "🌾 **করিমগঞ্জ ইউনিয়ন পরিষদ ও নাগরিক সেবা:**\n\n" +
+                "করিমগঞ্জ উপজেলায় মোট ১১টি ইউনিয়ন রয়েছে (যেমন: করিমগঞ্জ সদর, গুনধর, নিয়ামতপুর, দেহুন্দা, নোয়াবাদ, কিরাটন ইত্যাদি)।\n\n" +
+                "*ইউনিয়ন পরিষদ থেকে প্রাপ্ত প্রধান সেবাসমূহ:*\n" +
+                "- **নাগরিকত্ব ও চারিত্রিক সনদপত্র**\n" +
+                "- **জন্ম ও মৃত্যু নিবন্ধন সংশোধন ও নতুন আবেদন**\n" +
+                "- **ওয়ারিশ বা উত্তরাধিকার সনদপত্র**\n\n" +
+                "*আবেদন প্রক্রিয়া:*\n" +
+                "১. আপনার সংশ্লিষ্ট ইউনিয়ন পরিষদের ডিজিটাল সেন্টারে যোগাযোগ করুন।\n" +
+                "২. জন্ম নিবন্ধনের জন্য অনলাইনে আবেদন করুন: bdris.gov.bd।\n\n" +
+                "জরুরি প্রয়োজনে আপনার সংশ্লিষ্ট ইউনিয়নের চেয়ারম্যান বা সচিবের সাথে সরাসরি যোগাযোগ করতে আমাদের 'তথ্য' ট্যাবটি ভিজিট করুন।"
+            }
+            msg.contains("অনলাইন") || msg.contains("online") || msg.contains("ডিজিটাল") || msg.contains("সার্টিফিকেট") || 
+            msg.contains("রেজিস্ট্রেশন") || msg.contains("পাসপোর্ট") || msg.contains("এনআইডি") || msg.contains("nid") -> {
+                "🌐 **করিমগঞ্জ ডিজিটাল অনলাইন সেবাসমূহ:**\n\n" +
+                "অ্যাপের **'অনলাইন' (Online)** মেনু ব্যবহার করে আপনি ঘরে বসেই নিম্নলিখিত সেবাগুলির জন্য আবেদন ও ফি প্রদান করতে পারেন:\n\n" +
+                "- **জাতীয় পরিচয়পত্র (NID) সেবা:** সংশোধন, ডাউনলোড ও নতুন ভোটার আবেদন।\n" +
+                "- **অনলাইন পাসপোর্ট আবেদন:** ই-পাসপোর্ট পোর্টাল।\n" +
+                "- **জন্ম ও মৃত্যু নিবন্ধন:** নতুন আবেদন ও যাচাই।\n" +
+                "- **উপজেলা ই-সেবা কেন্দ্র:** সরকারি বিভিন্ন দপ্তরের সেবার আবেদন।\n\n" +
+                "যেকোনো কারিগরি সহায়তার জন্য আমাদের ডিজিটাল সেন্টারে যোগাযোগ করুন।"
+            }
+            msg.contains("হটলাইন") || msg.contains("হেল্পলাইন") || msg.contains("৯৯৯") || msg.contains("৩৩৩") || msg.contains("১০৯") || msg.contains("জরুরি নম্বর") -> {
+                "📞 **জাতীয় জরুরি ও জনকল্যাণমূলক হটলাইন নম্বরসমূহ:**\n\n" +
+                "যেকোনো সময়ে বিনামূল্যে কল করুন নিম্নোক্ত নম্বরগুলোতে:\n\n" +
+                "- **৯৯৯ (জাতীয় জরুরি সেবা):** পুলিশ, ফায়ার সার্ভিস ও অ্যাম্বুলেন্স সহায়তার জন্য।\n" +
+                "- **৩৩৩ (জাতীয় তথ্য ও সেবা):** সরকারি সেবা, সামাজিক সমস্যা ও ডিজিটাল তথ্য সহায়তার জন্য।\n" +
+                "- **১০৯ (নারী ও শিশু নির্যাতন প্রতিরোধ):** যেকোনো নির্যাতনের বিরুদ্ধে তাৎক্ষণিক আইনি সহায়তা।\n" +
+                "- **১০৬ (দুর্নীতি দমন কমিশন):** দুর্নীতি প্রতিরোধে সরাসরি অভিযোগ।\n" +
+                "- **১৬১২৩ (কৃষি কল সেন্টার):** ফসলের রোগবালাই ও কৃষি পরামর্শের জন্য।"
+            }
+            msg.contains("পর্যটন") || msg.contains("ঘোরার") || msg.contains("ভ্রমণ") || msg.contains("জঙ্গলবাড়ি") || 
+            msg.contains("কেল্লা") || msg.contains("দুর্গ") || msg.contains("ঈশা খাঁ") || msg.contains("ইতিহাস") || msg.contains("দর্শনীয়") -> {
+                "🏰 **করিমগঞ্জের দর্শনীয় স্থান ও ঐতিহ্য:**\n\n" +
+                "করিমগঞ্জ উপজেলার রয়েছে সুদীর্ঘ ঐতিহাসিক এবং সাংস্কৃতিক ঐতিহ্য।\n\n" +
+                "*প্রধান দর্শনীয় স্থান:*\n" +
+                "- **জঙ্গলবাড়ি দুর্গ (Isa Khan's Jangalbari Fort):** মসনদ-ই-আলা ঈশা খাঁর স্মৃতিবিজড়িত ঐতিহাসিক দুর্গ। এটি করিমগঞ্জ উপজেলার জঙ্গলবাড়ি গ্রামে অবস্থিত। এখানে রয়েছে ঈশা খাঁর দরবার হল, মসজিদ ও প্রাচীন তোরণ।\n" +
+                "- **নরসুんだা নদী তীরবর্তী পার্ক:** বিকেলে ভ্রমণের জন্য চমৎকার স্থান।\n\n" +
+                "*যাতায়াত:* কিশোরগঞ্জ সদর উপজেলা থেকে মাত্র ২০-৩০ মিনিটে ইজিবাইক বা সিএনজি যোগে জঙ্গলবাড়ি দুর্গে যাওয়া যায়।"
+            }
+            msg.contains("কৃষি") || msg.contains("কৃষক") || msg.contains("ধান") || msg.contains("ফসল") || 
+            msg.contains("প্রাণিসম্পদ") || msg.contains("গরু") || msg.contains("ছাগল") || msg.contains("ভেটেরিনারি") || 
+            msg.contains("চিকিৎসা") || msg.contains("গাভী") || msg.contains("বাছুর") -> {
+                "🐄 **করিমগঞ্জ কৃষি ও প্রাণিসম্পদ উন্নয়ন সেবা:**\n\n" +
+                "আমাদের উপজেলার অর্থনৈতিক মূল ভিত্তি কৃষি ও দুগ্ধ খামার। উপজেলা প্রশাসন কৃষকদের সহায়তায় সচেষ্ট।\n\n" +
+                "*কৃষি সেবা:*\n" +
+                "- আধুনিক চাষাবাদ পদ্ধতি ও সার/বীজ সহায়তার জন্য উপজেলা কৃষি কর্মকর্তার কার্যালয়ে যোগাযোগ করুন।\n" +
+                "- **কৃষি পরামর্শ হটলাইন:** ১৬১২৩\n\n" +
+                "*প্রাণিসম্পদ ও ভেটেরিনারি সেবা:*\n" +
+                "- **উপজেলা প্রাণিসম্পদ দপ্তর ও ভেটেরিনারি হাসপাতাল:** করিমগঞ্জ সদর।\n" +
+                "- **কৃত্রিম প্রজনন ও ভ্যাক্সিনেশন সেবা:** আমাদের টেকনিশিয়ানদের সরাসরি বাড়ি ডাকার ব্যবস্থা রয়েছে। জরুরি প্রয়োজনে প্রাণিসম্পদ কর্মকর্তার নম্বর সংগ্রহ করতে 'তথ্য' ট্যাবে যোগাযোগ করুন।"
+            }
+            msg.contains("হাই") || msg.contains("হ্যালো") || msg.contains("hello") || msg.contains("hi") || 
+            msg.contains("আসসালামু") || msg.contains("আলাইকুম") || msg.contains("কেমন") || msg.contains("আছেন") || 
+            msg.contains("আদাব") || msg.contains("নমস্কার") -> {
+                "👋 **আসসালামু আলাইকুম!**\n\n" +
+                "আমি করিমগঞ্জ ডিজিটাল সহকারী। আপনার নাগরিক সেবা সহজ করতে আমি সবসময় প্রস্তুত।\n\n" +
+                "আমি আপনাকে নিম্নোক্ত বিষয়গুলো সম্পর্কে তথ্য দিয়ে সাহায্য করতে পারি:\n" +
+                "- 🚑 জরুরি অ্যাম্বুলেন্স ও স্বাস্থ্যসেবা\n" +
+                "- 📝 অভিযোগ দায়েরের প্রক্রিয়া\n" +
+                "- 🏛️ ভূমি সেবা ও ইউনিয়ন পরিষদ তথ্য\n" +
+                "- 🌐 অনলাইন সরকারি সেবা ও জাতীয় হটলাইন\n\n" +
+                "আপনার যেকোনো প্রশ্ন আমাকে বাংলায় অথবা ইংরেজিতে টাইপ করে জানান।"
+            }
+            else -> {
+                "🤔 **আমি আপনার প্রশ্নটি পুরোপুরি বুঝতে পারিনি।**\n\n" +
+                "আমি আপনাকে করিমগঞ্জ উপজেলার নাগরিক সেবা সম্পর্কে সঠিক তথ্য দিতে পারি। অনুগ্রহ করে নিচের যেকোনো একটি বিষয়ে সংক্ষেপে প্রশ্ন করুন:\n" +
+                "- জরুরি অ্যাম্বুলেন্স বা হাসপাতালের তথ্য\n" +
+                "- জমিজমা বা ভূমি সেবা ও নামজারী\n" +
+                "- অভিযোগ দায়ের করার পদ্ধতি\n" +
+                "- ইউনিয়ন পরিষদের জন্ম নিবন্ধন ও সার্টিফিকেট\n\n" +
+                "অথবা সরাসরি নিচের সাজেস্টেড বাটনগুলোতে ট্যাপ করে তাৎক্ষণিক তথ্য জেনে নিতে পারেন।"
+            }
+        }
+    }
+
+    // General send action
+    val onSendText: (String) -> Unit = { text ->
+        val trimmed = text.trim()
+        if (trimmed.isNotEmpty()) {
+            if (selectedTabMode == 0) {
+                // AI Helpdesk Chat Flow
+                aiMessages.add(
+                    ChatMessage(
+                        id = "user_msg_${System.currentTimeMillis()}",
+                        sender = nickname,
+                        text = trimmed,
+                        timestamp = System.currentTimeMillis(),
+                        senderId = mySenderId,
+                        verified = isProfileVerified
+                    )
                 )
-                dbRef.child(key).setValue(msg)
                 messageText = ""
+                
+                // Trigger Simulated typing and reply
+                scope.launch {
+                    isAiTyping = true
+                    aiTypingText = "ডিজিটাল সহকারী টাইপ করছেন..."
+                    delay(1200)
+                    isAiTyping = false
+                    val botReply = getBotResponse(trimmed)
+                    aiMessages.add(
+                        ChatMessage(
+                            id = "bot_msg_${System.currentTimeMillis()}",
+                            sender = "করিমগঞ্জ ডিজিটাল সহকারী",
+                            text = botReply,
+                            timestamp = System.currentTimeMillis(),
+                            senderId = "bot",
+                            verified = true
+                        )
+                    )
+                }
+            } else {
+                // Public Citizen Chatroom Flow
+                if (dbRef != null) {
+                    // Try to send to Firebase Realtime Database
+                    val key = dbRef.push().key
+                    if (key != null) {
+                        val msg = mapOf(
+                            "sender" to nickname,
+                            "text" to trimmed,
+                            "timestamp" to System.currentTimeMillis(),
+                            "senderId" to mySenderId,
+                            "verified" to isProfileVerified
+                        )
+                        dbRef.child(key).setValue(msg)
+                    }
+                    messageText = ""
+                } else {
+                    // If database is null or offline, add to Local simulated Public messages
+                    publicMessages.add(
+                        ChatMessage(
+                            id = "local_public_msg_${System.currentTimeMillis()}",
+                            sender = nickname,
+                            text = trimmed,
+                            timestamp = System.currentTimeMillis(),
+                            senderId = mySenderId,
+                            verified = isProfileVerified
+                        )
+                    )
+                    messageText = ""
+                    
+                    // Trigger simulated citizen reply to make the forum active
+                    scope.launch {
+                        isPublicTyping = true
+                        val simulatedCitizens = listOf(
+                            Pair("জহিরুল ইসলাম", "খুবই দরকারী কথা বলেছেন ভাই। আমাদের সকলের সচেতনতা প্রয়োজন।"),
+                            Pair("ফাতেমা খাতুন", "সহমত প্রকাশ করছি। ডিজিটাল করিমগঞ্জ বিনির্মাণে এই অ্যাপটি একটি বড় পদক্ষেপ।"),
+                            Pair("সজীব মিয়া", "তথ্যগুলো শেয়ার করার জন্য ধন্যবাদ! অ্যাপের অভিযোগ সেলটি অনেক ভালো কাজ করে।")
+                        ).random()
+                        publicTypingName = simulatedCitizens.first
+                        delay(1500)
+                        isPublicTyping = false
+                        publicMessages.add(
+                            ChatMessage(
+                                id = "mock_reply_${System.currentTimeMillis()}",
+                                sender = simulatedCitizens.first,
+                                text = simulatedCitizens.second,
+                                timestamp = System.currentTimeMillis(),
+                                senderId = "simulated_citizen_${(10..99).random()}",
+                                verified = listOf(true, false).random()
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -3420,13 +5063,85 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0x11, 0x1A, 0x22))
+            .background(MinimalBackground)
     ) {
+        // Mode Selector Tab Header
         Card(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0x1E, 0x2B, 0x36)),
+            colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            shape = RoundedCornerShape(14.dp)
+        ) {
+            Column(modifier = Modifier.padding(6.dp)) {
+                // Custom Tab Row for modern design and touch precision
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selectedTabMode == 0) KarimganjGreen else Color.Transparent)
+                            .clickable { selectedTabMode = 0 },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.SmartToy,
+                                contentDescription = "ডিজিটাল সহকারী",
+                                tint = if (selectedTabMode == 0) Color.White else Color.Gray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "ডিজিটাল সহকারী",
+                                color = if (selectedTabMode == 0) Color.White else Color.Gray,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selectedTabMode == 1) KarimganjGreen else Color.Transparent)
+                            .clickable { selectedTabMode = 1 },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = "নাগরিক চ্যাট",
+                                tint = if (selectedTabMode == 1) Color.White else Color.Gray,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "নাগরিক চ্যাট রুম",
+                                color = if (selectedTabMode == 1) Color.White else Color.Gray,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Profile details / status banner
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            colors = CardDefaults.cardColors(containerColor = CardBackgroundLight),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
             shape = RoundedCornerShape(12.dp)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
@@ -3438,14 +5153,16 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(8.dp)
+                                .size(10.dp)
                                 .clip(CircleShape)
-                                .background(if (isConnected) Color.Green else Color.Red)
+                                .background(if (selectedTabMode == 0 || isConnected || dbRef == null) Color(0xFF4CAF50) else Color(0xFFE53935))
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isConnected) "অনলাইন চ্যাট রুম সচল" else "সংযোগ বিচ্ছিন্ন / অফলাইন মোড",
-                            color = if (isConnected) Color.Green else Color.Gray,
+                            text = if (selectedTabMode == 0) "সহকারী সেবা সচল ও অনলাইন" 
+                                   else if (isConnected) "পাবলিক চ্যাট রুম সচল" 
+                                   else "ডেমো/অফলাইন মোড সক্রিয়",
+                            color = if (selectedTabMode == 0 || isConnected || dbRef == null) Color(0xFF2E7D32) else Color(0xFFC62828),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -3456,18 +5173,22 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
                             onClick = {
                                 tempNameInput = nickname
                                 isEditingName = true
-                            }
+                            },
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)
                         ) {
-                            Icon(Icons.Default.Edit, contentDescription = "নাম পরিবর্তন", tint = KarimganjGreen, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.Edit, contentDescription = "নাম পরিবর্তন", tint = KarimganjGreen, modifier = Modifier.size(12.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("নাম পরিবর্তন", color = KarimganjGreen, fontSize = 12.sp)
+                            Text("নাম পরিবর্তন", color = KarimganjGreen, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
 
                 if (isEditingName) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
@@ -3475,9 +5196,10 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
                             onValueChange = { tempNameInput = it },
                             placeholder = { Text("আপনার নাম লিখুন", color = Color.Gray) },
                             singleLine = true,
-                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                            textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 13.sp),
                             modifier = Modifier
                                 .weight(1f)
+                                .height(48.dp)
                                 .padding(end = 8.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = KarimganjGreen,
@@ -3492,114 +5214,207 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
                                 }
                                 isEditingName = false
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen)
+                            colors = ButtonDefaults.buttonColors(containerColor = KarimganjGreen),
+                            modifier = Modifier.height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp)
                         ) {
-                            Text("সংরক্ষণ", color = Color.White, fontSize = 12.sp)
+                            Text("সংরক্ষণ", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 } else {
                     Text(
-                        text = "আপনার ছদ্মনাম: $nickname",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "আপনার নাম: $nickname" + if (isProfileVerified) " (ভেরিফাইড নাগরিক ✅)" else "",
+                        color = Color.DarkGray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }
         }
 
-        if (connectionError != null) {
-            Text(
-                text = "ত্রুটি: $connectionError\nদয়া করে Firebase কনসোলে Realtime Database সক্রিয় করুন।",
-                color = Color(0xFFEF5350),
-                fontSize = 12.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            )
-        }
-
+        // Selected Chat List Area
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            contentPadding = PaddingValues(16.dp),
+            contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            if (messages.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 40.dp),
-                        contentAlignment = Alignment.Center
+            val currentMessagesList = if (selectedTabMode == 0) aiMessages 
+                                      else if (dbRef != null) firebaseMessages 
+                                      else publicMessages
+
+            items(currentMessagesList, key = { it.id }) { msg ->
+                val isMe = msg.senderId == mySenderId
+                val isBot = msg.senderId == "bot"
+                
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
+                ) {
+                    // Sender name header
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "কোন বার্তা নেই। প্রথম বার্তাটি পাঠান!",
-                            color = Color.Gray,
+                            text = if (isMe) "আমি" else msg.sender,
+                            color = if (isMe) KarimganjGreen else if (isBot) KarimganjCrimson else Color.DarkGray,
+                            fontSize = 11.sp,
+                            fontWeight = if (isMe || isBot) FontWeight.Bold else FontWeight.Medium
+                        )
+                        if (msg.verified || isBot) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "ভেরিফাইড",
+                                tint = if (isBot) KarimganjCrimson else KarimganjGreen,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                    
+                    // Bubble Container
+                    Box(
+                        modifier = Modifier
+                            .widthIn(max = 290.dp)
+                            .clip(
+                                RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                    bottomStart = if (isMe) 16.dp else 2.dp,
+                                    bottomEnd = if (isMe) 2.dp else 16.dp
+                                )
+                            )
+                            .background(
+                                if (isMe) KarimganjGreen 
+                                else if (isBot) Color(0xFFFFF3E0) 
+                                else Color.White
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isMe) KarimganjGreen 
+                                        else if (isBot) Color(0xFFFFB74D) 
+                                        else Color(0xFFE0E0E0),
+                                shape = RoundedCornerShape(
+                                    topStart = 16.dp,
+                                    topEnd = 16.dp,
+                                    bottomStart = if (isMe) 16.dp else 2.dp,
+                                    bottomEnd = if (isMe) 2.dp else 16.dp
+                                )
+                            )
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = msg.text,
+                            color = if (isMe) Color.White else Color.Black,
                             fontSize = 14.sp,
-                            textAlign = TextAlign.Center
+                            lineHeight = 20.sp
                         )
                     }
                 }
-            } else {
-                items(messages, key = { it.id }) { msg ->
-                    val isMe = msg.senderId == mySenderId
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
-                    ) {
+            }
+
+            // Typing Indicator bubble
+            if ((selectedTabMode == 0 && isAiTyping) || (selectedTabMode == 1 && isPublicTyping)) {
+                item {
+                    val typingName = if (selectedTabMode == 0) "করিমগঞ্জ ডিজিটাল সহকারী" else publicTypingName
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(start = 4.dp, end = 4.dp, bottom = 2.dp)
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                text = if (isMe) "আমি" else msg.sender,
-                                color = if (isMe) KarimganjGreen.copy(alpha = 0.8f) else Color.Gray,
+                                text = typingName,
+                                color = if (selectedTabMode == 0) KarimganjCrimson else Color.DarkGray,
                                 fontSize = 11.sp,
-                                fontWeight = if (isMe) FontWeight.Bold else FontWeight.Normal
+                                fontWeight = FontWeight.Bold
                             )
-                            if (msg.verified) {
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "ভেরিফাইড নাগরিক",
-                                    tint = KarimganjGreen,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
                         }
-                        
                         Box(
                             modifier = Modifier
-                                .clip(
-                                    RoundedCornerShape(
-                                        topStart = 16.dp,
-                                        topEnd = 16.dp,
-                                        bottomStart = if (isMe) 16.dp else 2.dp,
-                                        bottomEnd = if (isMe) 2.dp else 16.dp
-                                    )
-                                )
-                                .background(if (isMe) KarimganjGreen else Color(0x2E, 0x3B, 0x46))
+                                .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 2.dp, bottomEnd = 16.dp))
+                                .background(Color(0xFFEEEEEE))
                                 .padding(horizontal = 14.dp, vertical = 10.dp)
                         ) {
-                            Text(
-                                text = msg.text,
-                                color = Color.White,
-                                fontSize = 14.sp
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Gray)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Gray)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.Gray)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (selectedTabMode == 0) "টাইপ করছেন..." else "লিখছেন...",
+                                    color = Color.Gray,
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
+        // AI Helpdesk suggestion buttons row
+        if (selectedTabMode == 0 && messageText.trim().isEmpty()) {
+            val suggestions = listOf(
+                Pair("🚑 স্বাস্থ্যসেবা", "অ্যাম্বুলেন্স ও উপজেলা স্বাস্থ্য কমপ্লেক্স এর তথ্য কি?"),
+                Pair("📝 অভিযোগ প্রক্রিয়া", "পৌরসভায় অভিযোগ করার নিয়ম কি?"),
+                Pair("🏛️ ভূমি সেবা", "অনলাইন ভূমি সেবা ও খতিয়ানের তথ্য কিভাবে পাবো?"),
+                Pair("🌾 ইউনিয়ন পরিষদ", "জন্ম নিবন্ধন ও ইউপি সনদপত্র কিভাবে নিবো?"),
+                Pair("🌐 অনলাইন সেবা", "পাসপোর্ট, NID এবং ভোটার আবেদনের লিংক কি?"),
+                Pair("📞 জাতীয় হটলাইন", "জরুরি সরকারি সেবা হটলাইন নম্বরসমূহ কি কি?")
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                suggestions.forEach { item ->
+                    AssistChip(
+                        onClick = { onSendText(item.second) },
+                        label = { Text(item.first, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = KarimganjGreen) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = CardBackgroundLight,
+                            labelColor = KarimganjGreen
+                        ),
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = KarimganjGreen.copy(alpha = 0.5f)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.height(36.dp)
+                    )
+                }
+            }
+        }
+
+        // Message Input Bottom Panel
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = Color(0x1E, 0x2B, 0x36),
-            tonalElevation = 8.dp
+            color = Color.White,
+            tonalElevation = 8.dp,
+            shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier
@@ -3610,21 +5425,31 @@ fun RealtimeChatScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = messageText,
                     onValueChange = { messageText = it },
-                    placeholder = { Text("বার্তা লিখুন...", color = Color.Gray) },
+                    placeholder = { 
+                        Text(
+                            text = if (selectedTabMode == 0) "সহকারীকে জিজ্ঞাসা করুন..." else "বার্তা লিখুন...", 
+                            color = Color.Gray,
+                            fontSize = 13.sp
+                        ) 
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .testTag("chat_input"),
-                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                    textStyle = androidx.compose.ui.text.TextStyle(color = Color.Black, fontSize = 14.sp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = KarimganjGreen,
-                        unfocusedBorderColor = Color.Gray
-                    )
+                        unfocusedBorderColor = Color.LightGray
+                    ),
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
-                    onClick = { sendMessage() },
+                    onClick = { onSendText(messageText) },
                     colors = IconButtonDefaults.iconButtonColors(containerColor = KarimganjGreen),
-                    modifier = Modifier.testTag("chat_send_button")
+                    modifier = Modifier
+                        .size(48.dp)
+                        .testTag("chat_send_button")
                 ) {
                     Icon(Icons.Default.Send, contentDescription = "বার্তা পাঠান", tint = Color.White)
                 }

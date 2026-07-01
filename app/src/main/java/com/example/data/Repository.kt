@@ -249,7 +249,7 @@ class CivicRepositoryImpl(
                     designation = "উপজেলা নির্বাহী অফিসার",
                     phone = "01713-332306",
                     address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2"
+                    imageUrl = null
                 ),
                 GovernmentOffice(
                     id = "office_2",
@@ -257,7 +257,7 @@ class CivicRepositoryImpl(
                     designation = "সহকারী কমিশনার (ভূমি) / AC Land",
                     phone = "01713-332310",
                     address = "উপজেলা ভূমি অফিস, করিমগঞ্জ, কিশোরগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1560250097-0b93528c311a"
+                    imageUrl = null
                 ),
                 GovernmentOffice(
                     id = "office_3",
@@ -265,7 +265,7 @@ class CivicRepositoryImpl(
                     designation = "অফিসার ইন চার্জ (OC)",
                     phone = "01320-104532",
                     address = "থানা মোড়, করিমগঞ্জ সদর",
-                    imageUrl = "https://images.unsplash.com/photo-1450101499163-c8848c66ca85"
+                    imageUrl = null
                 ),
                 GovernmentOffice(
                     id = "office_4",
@@ -273,7 +273,55 @@ class CivicRepositoryImpl(
                     designation = "উপজেলা কৃষি অফিসার",
                     phone = "01711-443322",
                     address = "কমপ্লেক্স ভবন, করিমগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1595974482597-4b8da8879bc5"
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_1",
+                    name = "মোঃ আজহারুল ইসলাম",
+                    designation = "সাঁট মুদ্রাক্ষরিক কাম কম্পিউটার অপারেটর",
+                    phone = "01704-014346",
+                    address = "azharca12@gmail.com | উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_2",
+                    name = "মোঃ আলাউদ্দিন মিয়া",
+                    designation = "জীপ গাড়ীচালক",
+                    phone = "01714-761019",
+                    address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_3",
+                    name = "মোঃ মনজিল মিয়া",
+                    designation = "অফিস সহায়ক",
+                    phone = "01715-565651",
+                    address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_4",
+                    name = "মোঃ ইদ্রিস মিয়া",
+                    designation = "অফিস সহায়ক",
+                    phone = "01626-995808",
+                    address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_5",
+                    name = "মোঃ কুরআন আলী",
+                    designation = "মালী",
+                    phone = "01922-005141",
+                    address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
+                ),
+                GovernmentOffice(
+                    id = "office_staff_6",
+                    name = "প্রদীপ বাস্পর",
+                    designation = "পরিচ্ছন্নতা কর্মী",
+                    phone = "01933-297860",
+                    address = "উপজেলা পরিষদ কমপ্লেক্স, করিমগঞ্জ, কিশোরগঞ্জ",
+                    imageUrl = null
                 )
             )
         )
@@ -354,14 +402,14 @@ class CivicRepositoryImpl(
                     name = "বালিখোলা হাওর ঘাট ও ডকইয়ার্ড (Balikhola)",
                     description = "করিমগঞ্জ ও মিঠামইনের অন্যতম আকর্ষণীয় সংযোগ সেতু ও পর্যটন ঘাট। সুবিশাল নীল হাওর জলের উত্তাল ঢেউ, শত শত পাল তোলা নৌকার মেলা এবং বালিখোলা ঘাটের বিখ্যাত সূর্যাস্ত দেখতে হাজার পর্যটক গ্রীষ্মকালে ভিড় জমায়। ঘাটের আশেপাশের দৃষ্টিনন্দন সড়ক ও ক্যাফে সমূহও দারুণ জনপ্রিয়।",
                     address = "চামড়া বন্দর মহাসড়ক, করিমগঞ্জ, কিশোরগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf"
+                    imageUrl = null
                 ),
                 TourismPlace(
                     id = "tour_2",
                     name = "ঐতিহাসিক জঙ্গলবাড়ি দুর্গ (ঈসা খাঁর দ্বিতীয় রাজধানী)",
                     description = "বাংলার বারো ভূঁইয়ার প্রধান বীর ঈসা খাঁর স্মৃতিবিজড়িত অন্যতম ঐতিহাসিক দুর্গ এটি। দুর্গের সুন্দর প্রাঙ্গণ, প্রাচীন শৈলীর মসজিদ ও সুদীর্ঘ পরিখা আপনার ভ্রমণের মধ্য দিয়ে আপনাকে মোঘল ও সুলতানি আমলে ঘুরিয়ে আনবে। কিশোরগঞ্জ জেলার অন্যতম গৌরবময় নিদর্শন এটি।",
                     address = "জঙ্গলবাড়ি গ্রাম, করিমগঞ্জ",
-                    imageUrl = "https://images.unsplash.com/photo-1585140501193-ab794baac7b9"
+                    imageUrl = null
                 )
             )
         )

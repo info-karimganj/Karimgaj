@@ -20,11 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavType
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.*
 import com.example.viewmodel.MainViewModel
 import com.example.ui.theme.MyApplicationTheme
@@ -40,46 +36,59 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
-                val navController = rememberNavController()
-                
-                NavHost(
-                    navController = navController,
-                    startDestination = "splash"
-                ) {
-                    composable("splash") {
-                        SplashScreen(
-                            onNavigateToHome = {
-                                navController.navigate("main") {
-                                    popUpTo("splash") { inclusive = true }
-                                }
-                            }
-                        )
-                    }
-                    
-                    composable("main") {
-                        MainHostScreen(
-                            viewModel = viewModel,
-                            onNavigateToDetail = { itemId ->
-                                navController.navigate("detail/$itemId")
-                            }
-                        )
-                    }
-
-                    composable(
-                        route = "detail/{itemId}",
-                        arguments = listOf(navArgument("itemId") { type = NavType.StringType })
-                    ) { backStackEntry ->
-                        val itemId = backStackEntry.arguments?.getString("itemId") ?: ""
-                        DetailScreen(
-                            itemId = itemId,
-                            viewModel = viewModel,
-                            onNavigateBack = {
-                                navController.popBackStack()
-                            }
-                        )
-                    }
+            val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+            MyApplicationTheme(darkTheme = isDarkMode) {
+                CompositionLocalProvider(LocalThemeState provides isDarkMode) {
+                    App(viewModel = viewModel)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun App(viewModel: MainViewModel) {
+    // Top-level screen state (either "splash" or "main")
+    var currentScreen by remember { mutableStateOf("splash") }
+    // If set, shows item detail page on top
+    var selectedDetailId by remember { mutableStateOf<String?>(null) }
+
+    // Unified global back button navigation flow
+    BackHandler(enabled = currentScreen != "splash") {
+        if (selectedDetailId != null) {
+            selectedDetailId = null
+        } else {
+            val handledByViewModel = viewModel.handleBack()
+            if (!handledByViewModel) {
+                currentScreen = "splash"
+            }
+        }
+    }
+
+    when (currentScreen) {
+        "splash" -> {
+            SplashScreen(
+                onNavigateToHome = {
+                    currentScreen = "main"
+                }
+            )
+        }
+        "main" -> {
+            if (selectedDetailId != null) {
+                DetailScreen(
+                    itemId = selectedDetailId!!,
+                    viewModel = viewModel,
+                    onNavigateBack = {
+                        selectedDetailId = null
+                    }
+                )
+            } else {
+                MainHostScreen(
+                    viewModel = viewModel,
+                    onNavigateToDetail = { itemId ->
+                        selectedDetailId = itemId
+                    }
+                )
             }
         }
     }
@@ -90,39 +99,28 @@ fun MainHostScreen(
     viewModel: MainViewModel,
     onNavigateToDetail: (String) -> Unit
 ) {
-    // We maintain a history trace of tabs so that the system back button takes the user to their previously viewed tab.
-    val tabHistory = remember { mutableStateListOf(0) }
-    val selectedTab = tabHistory.lastOrNull() ?: 0
-
-    val navigateToTab = { tabIndex: Int ->
-        if (tabHistory.lastOrNull() != tabIndex) {
-            tabHistory.remove(tabIndex)
-            tabHistory.add(tabIndex)
-        }
-    }
-
-    BackHandler(enabled = tabHistory.size > 1) {
-        tabHistory.removeLast()
-    }
+    val selectedTab by viewModel.selectedTab.collectAsStateWithLifecycle()
+    val isEnglish by viewModel.isEnglish.collectAsStateWithLifecycle()
+    val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
 
     Scaffold(
         bottomBar = {
             NavigationBar(
-                containerColor = Color.White,
+                containerColor = if (isDarkMode) Color(0xFF1E293B) else Color.White,
                 tonalElevation = 8.dp
             ) {
                 // Home (হোম)
                 NavigationBarItem(
                     selected = selectedTab == 0,
-                    onClick = { navigateToTab(0) },
-                    icon = { Icon(if (selectedTab == 0) Icons.Default.Home else Icons.Outlined.Home, contentDescription = "হোম") },
-                    label = { Text("হোম", fontSize = 11.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
+                    onClick = { viewModel.selectTab(0) },
+                    icon = { Icon(if (selectedTab == 0) Icons.Default.Home else Icons.Outlined.Home, contentDescription = if (isEnglish) "Home" else "হোম") },
+                    label = { Text(if (isEnglish) "Home" else "হোম", fontSize = 11.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = KarimganjCrimson,
                         selectedTextColor = KarimganjCrimson,
-                        indicatorColor = Color(0xFFFFEBEE),
-                        unselectedIconColor = Color(0xFF6B7280),
-                        unselectedTextColor = Color(0xFF6B7280)
+                        indicatorColor = if (isDarkMode) Color(0xFF451A1A) else Color(0xFFFFEBEE),
+                        unselectedIconColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                        unselectedTextColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280)
                     ),
                     modifier = Modifier.testTag("nav_item_home")
                 )
@@ -130,15 +128,15 @@ fun MainHostScreen(
                 // Online (অনলাইন)
                 NavigationBarItem(
                     selected = selectedTab == 1,
-                    onClick = { navigateToTab(1) },
-                    icon = { Icon(if (selectedTab == 1) Icons.Default.Language else Icons.Outlined.Language, contentDescription = "অনলাইন") },
-                    label = { Text("অনলাইন", fontSize = 11.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
+                    onClick = { viewModel.selectTab(1) },
+                    icon = { Icon(if (selectedTab == 1) Icons.Default.Language else Icons.Outlined.Language, contentDescription = if (isEnglish) "Online" else "অনলাইন") },
+                    label = { Text(if (isEnglish) "Online" else "অনলাইন", fontSize = 11.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = KarimganjCrimson,
                         selectedTextColor = KarimganjCrimson,
-                        indicatorColor = Color(0xFFFFEBEE),
-                        unselectedIconColor = Color(0xFF6B7280),
-                        unselectedTextColor = Color(0xFF6B7280)
+                        indicatorColor = if (isDarkMode) Color(0xFF451A1A) else Color(0xFFFFEBEE),
+                        unselectedIconColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                        unselectedTextColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280)
                     ),
                     modifier = Modifier.testTag("nav_item_online")
                 )
@@ -146,15 +144,15 @@ fun MainHostScreen(
                 // Complaint (অভিযোগ)
                 NavigationBarItem(
                     selected = selectedTab == 2,
-                    onClick = { navigateToTab(2) },
-                    icon = { Icon(if (selectedTab == 2) Icons.Default.EditNote else Icons.Outlined.EditNote, contentDescription = "অভিযোগ") },
-                    label = { Text("অভিযোগ", fontSize = 11.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) },
+                    onClick = { viewModel.selectTab(2) },
+                    icon = { Icon(if (selectedTab == 2) Icons.Default.EditNote else Icons.Outlined.EditNote, contentDescription = if (isEnglish) "Complaint" else "অভিযোগ") },
+                    label = { Text(if (isEnglish) "Complaint" else "অভিযোগ", fontSize = 11.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = KarimganjCrimson,
                         selectedTextColor = KarimganjCrimson,
-                        indicatorColor = Color(0xFFFFEBEE),
-                        unselectedIconColor = Color(0xFF6B7280),
-                        unselectedTextColor = Color(0xFF6B7280)
+                        indicatorColor = if (isDarkMode) Color(0xFF451A1A) else Color(0xFFFFEBEE),
+                        unselectedIconColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                        unselectedTextColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280)
                     ),
                     modifier = Modifier.testTag("nav_item_complaint")
                 )
@@ -162,15 +160,15 @@ fun MainHostScreen(
                 // Info (তথ্য)
                 NavigationBarItem(
                     selected = selectedTab == 3,
-                    onClick = { navigateToTab(3) },
-                    icon = { Icon(if (selectedTab == 3) Icons.Default.Info else Icons.Outlined.Info, contentDescription = "তথ্য") },
-                    label = { Text("তথ্য", fontSize = 11.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Medium) },
+                    onClick = { viewModel.selectTab(3) },
+                    icon = { Icon(if (selectedTab == 3) Icons.Default.Info else Icons.Outlined.Info, contentDescription = if (isEnglish) "Info" else "তথ্য") },
+                    label = { Text(if (isEnglish) "Info" else "তথ্য", fontSize = 11.sp, fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = KarimganjCrimson,
                         selectedTextColor = KarimganjCrimson,
-                        indicatorColor = Color(0xFFFFEBEE),
-                        unselectedIconColor = Color(0xFF6B7280),
-                        unselectedTextColor = Color(0xFF6B7280)
+                        indicatorColor = if (isDarkMode) Color(0xFF451A1A) else Color(0xFFFFEBEE),
+                        unselectedIconColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                        unselectedTextColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280)
                     ),
                     modifier = Modifier.testTag("nav_item_info")
                 )
@@ -178,15 +176,15 @@ fun MainHostScreen(
                 // Profile (প্রোফাইল)
                 NavigationBarItem(
                     selected = selectedTab == 4,
-                    onClick = { navigateToTab(4) },
-                    icon = { Icon(if (selectedTab == 4) Icons.Default.Person else Icons.Outlined.Person, contentDescription = "প্রোফাইল") },
-                    label = { Text("প্রোফাইল", fontSize = 11.sp, fontWeight = if (selectedTab == 4) FontWeight.Bold else FontWeight.Medium) },
+                    onClick = { viewModel.selectTab(4) },
+                    icon = { Icon(if (selectedTab == 4) Icons.Default.Person else Icons.Outlined.Person, contentDescription = if (isEnglish) "Profile" else "প্রোফাইল") },
+                    label = { Text(if (isEnglish) "Profile" else "প্রোফাইল", fontSize = 11.sp, fontWeight = if (selectedTab == 4) FontWeight.Bold else FontWeight.Medium) },
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = KarimganjCrimson,
                         selectedTextColor = KarimganjCrimson,
-                        indicatorColor = Color(0xFFFFEBEE),
-                        unselectedIconColor = Color(0xFF6B7280),
-                        unselectedTextColor = Color(0xFF6B7280)
+                        indicatorColor = if (isDarkMode) Color(0xFF451A1A) else Color(0xFFFFEBEE),
+                        unselectedIconColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280),
+                        unselectedTextColor = if (isDarkMode) Color(0xFF9CA3AF) else Color(0xFF6B7280)
                     ),
                     modifier = Modifier.testTag("nav_item_profile")
                 )
@@ -198,12 +196,12 @@ fun MainHostScreen(
                 0 -> HomeScreen(
                     viewModel = viewModel,
                     onNavigateToDetail = onNavigateToDetail,
-                    onNavigateToTab = { tabIndex -> navigateToTab(tabIndex) }
+                    onNavigateToTab = { tabIndex -> viewModel.selectTab(tabIndex) }
                 )
-                1 -> OnlineServicesScreen()
-                2 -> ComplaintScreen()
+                1 -> OnlineServicesScreen(isEnglish = isEnglish)
+                2 -> ComplaintScreen(isEnglish = isEnglish)
                 3 -> AboutScreen(viewModel = viewModel)
-                4 -> ProfileScreen(onCallHelpline = { navigateToTab(0) }) // Back to Home or trigger action
+                4 -> ProfileScreen(isEnglish = isEnglish, onCallHelpline = { viewModel.selectTab(0) }) // Back to Home or trigger action
             }
         }
     }

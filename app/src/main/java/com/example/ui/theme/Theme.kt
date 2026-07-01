@@ -12,15 +12,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
-  lightColorScheme(
+  darkColorScheme(
     primary = MinimalTeal,
     secondary = MinimalMint,
-    background = MinimalBackground,
-    surface = DarkCardBg,
+    background = Color(0xFF0F172A), // Elegant slate dark background
+    surface = Color(0xFF1E293B), // Elegant slate dark card background
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = MinimalText,
-    onSurface = MinimalText
+    onBackground = Color(0xFFF9FAFB),
+    onSurface = Color(0xFFF9FAFB)
   )
 
 private val LightColorScheme =
@@ -37,10 +37,10 @@ private val LightColorScheme =
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = true, // Default to true
+  darkTheme: Boolean = false, // Default to false
   dynamicColor: Boolean = false, // Force custom theme colors
   content: @Composable () -> Unit,
 ) {
-  val colorScheme = DarkColorScheme
+  val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
   MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
 }
